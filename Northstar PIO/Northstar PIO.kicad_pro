@@ -56,6 +56,22 @@
         }
       ],
       "drc_exclusions": [
+        "silk_over_copper|88635373|51816000|0972bc71-75fb-4354-9623-3668465765aa|1ee76b11-b14f-4425-b2fa-95ab62986d25",
+        "silk_over_copper|88646000|33909000|ac0b350b-8264-4fcf-a95b-70581328aec7|093ec4a0-0ee4-4594-8bdb-2d21e6fbf11f",
+        "silk_over_copper|88646000|36576000|4c6e1ed2-ee11-440b-ad9a-d3dbb547e53c|20c4f5f8-cee4-486d-b810-1147b774dc1f",
+        "silk_over_copper|88646000|38989000|0de8ed92-f5ac-41e6-bbae-90bda83dda6b|5900e0ba-0cc7-4cf0-b187-5d425f5685e3",
+        "silk_over_copper|88646000|41529000|70c7cb8b-7c45-468f-bb50-9239d6e9652f|7d8be866-44ba-4bb2-8897-3ceba4fb52e1",
+        "silk_over_copper|88646000|44069000|5088cb85-66ce-4692-89d5-133bdb83465c|df74dcd2-47e7-470b-b8de-3d52f488efcb",
+        "silk_over_copper|88646000|46609000|9a298fbc-309c-48ba-a31f-f02e07925d93|ba5a1e04-8ffa-44e5-8fb1-52c422e732d8",
+        "silk_over_copper|88646000|49149000|07102374-b89b-44e0-b660-d328ddc706b9|a155eac0-c833-4bed-b97d-1f5e65d354bc",
+        "silk_over_copper|96255373|36576000|4c6e1ed2-ee11-440b-ad9a-d3dbb547e53c|fb2fd47e-e712-44b1-b5e3-d9cab3d5b6e3",
+        "silk_over_copper|96255373|38989000|0de8ed92-f5ac-41e6-bbae-90bda83dda6b|c6d248c1-3a60-47cd-ba0f-1abdfcd1cfdb",
+        "silk_over_copper|96255373|41529000|70c7cb8b-7c45-468f-bb50-9239d6e9652f|e3b625d6-9276-4778-aa33-4c8345050db1",
+        "silk_over_copper|96255373|44069000|5088cb85-66ce-4692-89d5-133bdb83465c|35a27f5e-6b40-49e9-82d7-72ec8b049ef2",
+        "silk_over_copper|96255373|46609000|9a298fbc-309c-48ba-a31f-f02e07925d93|cf542f05-f84e-417a-95cf-1bb1a8194972",
+        "silk_over_copper|96255373|49149000|07102374-b89b-44e0-b660-d328ddc706b9|2c4c9e70-88fe-43aa-8bb6-2bba8bff5908",
+        "silk_over_copper|96255373|51816000|0972bc71-75fb-4354-9623-3668465765aa|9b95814f-669b-409a-9290-19c501fed11b",
+        "silk_over_copper|96266000|41529000|ac0b350b-8264-4fcf-a95b-70581328aec7|e3b625d6-9276-4778-aa33-4c8345050db1",
         "track_dangling|115000000|42500000|79c27efc-42f4-4173-8f43-167a7f854bd8|00000000-0000-0000-0000-000000000000"
       ],
       "meta": {
