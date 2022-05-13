@@ -5287,7 +5287,7 @@
   (gr_line (start 154.635373 167.715486) (end 154.635373 27.805486) (layer "Edge.Cuts") (width 0.1) (tstamp 99fdad4b-67df-4338-ab02-f49dc004d666))
   (gr_line (start 78.335373 27.805486) (end 154.635373 27.805486) (layer "Edge.Cuts") (width 0.1) (tstamp b1e517d4-8f6a-4c9e-aba5-0ea1b3399e42))
   (gr_line (start 87.635373 167.715486) (end 78.335373 167.715486) (layer "Edge.Cuts") (width 0.1) (tstamp c95246c9-d5b7-4a1a-acdf-abbfffd5ef88))
-  (gr_text "ASSY 00xxx\nPIO" (at 84.825373 152.045486 90) (layer "F.Cu") (tstamp 732f4616-9686-45b7-995e-72519f23bdcd)
+  (gr_text "ASSY 00113\nPIO" (at 84.825373 152.045486 90) (layer "F.Cu") (tstamp 732f4616-9686-45b7-995e-72519f23bdcd)
     (effects (font (size 1.4 1.4) (thickness 0.2)))
   )
   (gr_text "D5" (at 142.367 66.04) (layer "B.SilkS") (tstamp 03e72557-4170-434c-a750-d4a0c36c4813)
