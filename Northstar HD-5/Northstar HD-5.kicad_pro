@@ -320,6 +320,22 @@
     [
       "31e1fbb6-e300-454e-85ba-52cfdd1ccfd7",
       ""
+    ],
+    [
+      "562fb5cf-6da4-4d14-b7c1-b2e96d0c11f9",
+      "Power and pullups"
+    ],
+    [
+      "0ab66779-7525-4dc2-99f2-7b1c74532549",
+      "HD5 Spare Gates"
+    ],
+    [
+      "057f6fe3-1611-4427-a651-f2357511c25e",
+      "HD5 Sheet 1"
+    ],
+    [
+      "5732790b-215d-4127-a64b-f5cc9acde96e",
+      "HD5 Sheet 2"
     ]
   ],
   "text_variables": {}
