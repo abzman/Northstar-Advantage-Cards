@@ -1792,6 +1792,22 @@
   )
 
 
+  (no_connect (at 154.305 78.74) (uuid 50480e95-197b-45b3-aa5c-7990b92c0d4a))
+  (no_connect (at 154.305 66.675) (uuid 50480e95-197b-45b3-aa5c-7990b92c0d4a))
+  (no_connect (at 135.255 78.74) (uuid 50480e95-197b-45b3-aa5c-7990b92c0d4a))
+  (no_connect (at 116.205 79.375) (uuid 50480e95-197b-45b3-aa5c-7990b92c0d4a))
+  (no_connect (at 116.205 66.675) (uuid 50480e95-197b-45b3-aa5c-7990b92c0d4a))
+  (no_connect (at 135.255 66.675) (uuid 50480e95-197b-45b3-aa5c-7990b92c0d4a))
+  (no_connect (at 193.04 69.215) (uuid 50480e95-197b-45b3-aa5c-7990b92c0d4a))
+  (no_connect (at 193.04 82.55) (uuid 50480e95-197b-45b3-aa5c-7990b92c0d4a))
+  (no_connect (at 173.99 69.215) (uuid 50480e95-197b-45b3-aa5c-7990b92c0d4a))
+  (no_connect (at 173.99 82.55) (uuid 50480e95-197b-45b3-aa5c-7990b92c0d4a))
+  (no_connect (at 154.94 90.805) (uuid 50480e95-197b-45b3-aa5c-7990b92c0d4a))
+  (no_connect (at 173.99 97.155) (uuid 50480e95-197b-45b3-aa5c-7990b92c0d4a))
+  (no_connect (at 135.255 102.87) (uuid 50480e95-197b-45b3-aa5c-7990b92c0d4a))
+  (no_connect (at 135.255 90.805) (uuid 50480e95-197b-45b3-aa5c-7990b92c0d4a))
+  (no_connect (at 116.205 91.44) (uuid 50480e95-197b-45b3-aa5c-7990b92c0d4a))
+
   (symbol (lib_id "74xx:74LS04") (at 146.685 66.675 0) (unit 4)
     (in_bom yes) (on_board yes) (fields_autoplaced)
     (uuid 0da3b507-7c20-4b13-afb3-ebe4bb9b205b)
