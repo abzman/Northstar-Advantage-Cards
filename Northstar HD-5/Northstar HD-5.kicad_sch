@@ -599,6 +599,36 @@
     (path "/562fb5cf-6da4-4d14-b7c1-b2e96d0c11f9/ce4a0331-a915-4c2c-a774-44ba848f27aa"
       (reference "C21") (unit 1) (value "47nF") (footprint "Capacitor_THT:C_Disc_D10.0mm_W2.5mm_P5.00mm")
     )
+    (path "/562fb5cf-6da4-4d14-b7c1-b2e96d0c11f9/672945ef-7bb5-4a33-85ff-0ed1e3ed0514"
+      (reference "C22") (unit 1) (value "47nF") (footprint "Capacitor_THT:C_Disc_D10.0mm_W2.5mm_P5.00mm")
+    )
+    (path "/562fb5cf-6da4-4d14-b7c1-b2e96d0c11f9/b7ef77bb-923c-414d-8d91-07f38a663ae2"
+      (reference "C23") (unit 1) (value "47nF") (footprint "Capacitor_THT:C_Disc_D10.0mm_W2.5mm_P5.00mm")
+    )
+    (path "/562fb5cf-6da4-4d14-b7c1-b2e96d0c11f9/d4c50ac5-015f-4d8c-9994-df1037055369"
+      (reference "C24") (unit 1) (value "47nF") (footprint "Capacitor_THT:C_Disc_D10.0mm_W2.5mm_P5.00mm")
+    )
+    (path "/562fb5cf-6da4-4d14-b7c1-b2e96d0c11f9/1eb7c23c-553c-4943-869c-1853d58312f3"
+      (reference "C25") (unit 1) (value "47nF") (footprint "Capacitor_THT:C_Disc_D10.0mm_W2.5mm_P5.00mm")
+    )
+    (path "/562fb5cf-6da4-4d14-b7c1-b2e96d0c11f9/3e5e2e40-9c61-4b23-ba7a-43bd0abb33fe"
+      (reference "C26") (unit 1) (value "47nF") (footprint "Capacitor_THT:C_Disc_D10.0mm_W2.5mm_P5.00mm")
+    )
+    (path "/562fb5cf-6da4-4d14-b7c1-b2e96d0c11f9/cbff23af-f13f-49ac-bf5d-fa0e2a460f76"
+      (reference "C27") (unit 1) (value "47nF") (footprint "Capacitor_THT:C_Disc_D10.0mm_W2.5mm_P5.00mm")
+    )
+    (path "/562fb5cf-6da4-4d14-b7c1-b2e96d0c11f9/26f2a6ed-8f1b-4c81-ac7a-a4f1178007dd"
+      (reference "C28") (unit 1) (value "47nF") (footprint "Capacitor_THT:C_Disc_D10.0mm_W2.5mm_P5.00mm")
+    )
+    (path "/562fb5cf-6da4-4d14-b7c1-b2e96d0c11f9/d3b2d499-cd5b-46d9-9765-70887850b584"
+      (reference "C29") (unit 1) (value "47nF") (footprint "Capacitor_THT:C_Disc_D10.0mm_W2.5mm_P5.00mm")
+    )
+    (path "/562fb5cf-6da4-4d14-b7c1-b2e96d0c11f9/31be4551-27f6-46a5-8bf8-4c5005635a03"
+      (reference "C30") (unit 1) (value "47nF") (footprint "Capacitor_THT:C_Disc_D10.0mm_W2.5mm_P5.00mm")
+    )
+    (path "/562fb5cf-6da4-4d14-b7c1-b2e96d0c11f9/b8378582-bedb-4278-b957-914c951ae528"
+      (reference "C31") (unit 1) (value "47nF") (footprint "Capacitor_THT:C_Disc_D10.0mm_W2.5mm_P5.00mm")
+    )
     (path "/5732790b-215d-4127-a64b-f5cc9acde96e/2ddbcca8-b0a4-4991-8e08-7dec78e5b65f"
       (reference "CR1") (unit 1) (value "1N4148") (footprint "Diode_THT:D_A-405_P12.70mm_Horizontal")
     )

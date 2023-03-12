@@ -3141,7 +3141,6 @@
     )
   )
 
-
   (junction (at 219.71 85.09) (diameter 0) (color 0 0 0 0)
     (uuid 02c35fc4-0be4-4bdd-bd77-7d9f457129cb)
   )
@@ -5795,6 +5794,14 @@
     (uuid fbb03791-ae9d-4c2c-b22c-88c8bb999f75)
   )
 
+  (global_label "PU2" (shape input) (at 103.505 127.635 0) (fields_autoplaced)
+    (effects (font (size 1.27 1.27)) (justify left))
+    (uuid 0ca36076-aa18-4c91-8052-963dbabd3374)
+    (property "Intersheet References" "${INTERSHEET_REFS}" (id 0) (at 109.7281 127.5556 0)
+      (effects (font (size 1.27 1.27)) (justify left) hide)
+    )
+  )
+
   (symbol (lib_id "Device:C") (at 307.34 80.645 270) (unit 1)
     (in_bom yes) (on_board yes)
     (uuid 01413c56-5242-4988-9b48-5d4fdedf5e24)
@@ -7059,13 +7066,13 @@
     (pin "1" (uuid 956d5536-4038-4387-bb1a-d8f4898d5b30))
   )
 
-  (symbol (lib_id "Device:R_Potentiometer") (at 283.845 92.075 0) (mirror y) (unit 1)
+  (symbol (lib_id "Device:R_Potentiometer") (at 283.845 92.075 180) (unit 1)
     (in_bom yes) (on_board yes)
     (uuid 6f988da0-35a7-46d1-ba3c-df26a22be8cd)
-    (property "Reference" "R13" (id 0) (at 285.75 89.535 0)
+    (property "Reference" "R13" (id 0) (at 285.75 91.44 0)
       (effects (font (size 1.27 1.27)) (justify right))
     )
-    (property "Value" "5K" (id 1) (at 285.75 91.44 0)
+    (property "Value" "5K" (id 1) (at 285.75 89.535 0)
       (effects (font (size 1.27 1.27)) (justify right))
     )
     (property "Footprint" "Potentiometer_THT:Potentiometer_Bourns_3009Y_Horizontal" (id 2) (at 283.845 92.075 0)
