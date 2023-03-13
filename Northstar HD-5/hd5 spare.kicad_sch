@@ -1828,7 +1828,7 @@
     (uuid 1e6ed98e-716d-43ae-a313-37381203899a)
     (property "Reference" "U1K1" (id 0) (at 166.37 88.1085 0))
     (property "Value" "LM393" (id 1) (at 166.37 90.8836 0))
-    (property "Footprint" "Package_DIP:DIP-8-16_W7.62mm" (id 2) (at 166.37 97.155 0)
+    (property "Footprint" "Package_DIP:DIP-8_W7.62mm" (id 2) (at 166.37 97.155 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Datasheet" "http://www.ti.com/lit/ds/symlink/lm393.pdf" (id 3) (at 166.37 97.155 0)
