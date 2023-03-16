@@ -815,8 +815,8 @@
     (path "/562fb5cf-6da4-4d14-b7c1-b2e96d0c11f9/32944643-17b5-4170-a43f-8b5cbba31924"
       (reference "RN1") (unit 1) (value "220/330") (footprint "Package_SIP:SIP-8_19x3mm_P2.54mm")
     )
-    (path "/562fb5cf-6da4-4d14-b7c1-b2e96d0c11f9/a8c7d96e-3909-4925-94d8-b2404e1418bc"
-      (reference "RN2") (unit 1) (value "4.7K") (footprint "Package_SIP:SIP-9_21.54x3mm_P2.54mm")
+    (path "/562fb5cf-6da4-4d14-b7c1-b2e96d0c11f9/c9a721c3-f86a-45f6-bd08-9fa6e45b99ca"
+      (reference "RN2") (unit 1) (value "4.7K") (footprint "Resistor_THT:R_Array_SIP10")
     )
     (path "/5732790b-215d-4127-a64b-f5cc9acde96e/5f4ef385-17d3-4619-b24e-34187bdad543"
       (reference "TP1") (unit 1) (value "5Mhz") (footprint "Connector_PinHeader_2.54mm:PinHeader_1x01_P2.54mm_Vertical")
