@@ -1,0 +1,165 @@
+;posted by John Crane on Aug 7 2012 in comp.sys.northstar
+; may be a custom ROM, says other Northstar owners - Herb Johnson
+;
+; North-Star MDS-A disk boot rom disassembly
+;
+E900 31 14 21            LXI  S,$2114		; Set stack
+E903 06 0A               MVI  B,$0A			; Set retry count (10)
+E905 C5                  PUSH B				; [2112] = Retry count
+E906 3E 59               MVI  A,$59			; Get flag value
+E908 32 00 20            STA  $2000			; Set flag1
+E90B 32 03 20            STA  $2003			; Set last drive (invalid)
+E90E 01 01 00            LXI  B,$0001		; Drive 1
+E911 79                  MOV  A,C			; A = 01 (Track)
+E912 16 04               MVI  D,$04			; Sector 4
+E914 59                  MOV  E,C			; E = 01 (Drive)
+E915 21 00 20            LXI  H,$2000		; Load address
+E918 CD 1E E9            CALL $E91E			; [2110] = e91b
+E91B C3 98 E9            JMP  $E998			; And launch
+; Disk access subroutine
+; A=#blks B=track C=drive D=Sector E=01Read/00Write/03Verify* HL=RamAddr
+; [*: only Read is native, Write/Verify jump back to NorthStar DOS]
+E91E F5                  PUSH PSW			; [210E] = 01xx - Save #blocks
+E91F E5                  PUSH H				; [210C] = 2000 - Save RAM addr
+E920 D5                  PUSH D				; [210A] = 0401 - Save sector/func
+E921 C5                  PUSH B				; [2108] = 0001 - Save track/drive
+E922 06 EB               MVI  B,$EB			; High access
+E924 CD E0 E9            CALL $E9E0			; Motors ON and select drive [C]
+E927 21 FF 34            LXI  H,$34FF		; Offset to 2000
+E92A 09                  DAD  B				; HL = 2000 (RAM address)
+E92B 7E                  MOV  A,M			; Get flag
+E92C EE 59               XRI  $59			; Has it changed? (First call)
+E92E E5                  PUSH H				; s[2106] = 2000 (Save RAM addr)
+E92F CC 64 E9            CZ   $E964			; Step to track 0
+E932 E1                  POP  H				; <[2106] Ram address
+E933 F1                  POP  PSW			; <[2108] Track # (from BC)
+E934 CD 64 E9            CALL $E964			; Step to track
+E937 C1                  POP  B				; <[210A] Sector/function
+E938 CD CE E9            CALL $E9CE			; Wait one sector time
+E93B 3A 30 EB            LDA  $EB30			; Read B status
+E93E E6 0F               ANI  $0F			; Save only sector number
+E940 B8                  CMP  B				; Are we at sector
+E941 C2 38 E9            JNZ  $E938			; No, wait for it
+E944 E1                  POP  H				; <[210C] Ram address
+E945 0D                  DCR  C				; Test function
+E946 FA 0A 20            JM   $200A			; 00=Write
+E949 C2 07 20            JNZ  $2007			; !01=Verify
+; Read block of data from drive
+E94C 06 8C               MVI  B,$8C			; Timeout count
+E94E 11 50 EB            LXI  D,$EB50		; Read data
+E951 0E 00               MVI  C,$00			; Read 256 bytes
+E953 3A 10 EB            LDA  $EB10			; Get status
+E956 E6 04               ANI  $04			; Wait for Body
+E958 C2 AE E9            JNZ  $E9AE			; Body - ready for data
+E95B 05                  DCR  B				; Reduce timeout
+E95C C2 53 E9            JNZ  $E953			; Wait for it
+E95F 3E 01               MVI  A,$01			; Report TIMEOUT error
+E961 C3 AB E9            JMP  $E9AB			; And exit
+;
+; Step to track [A]
+; On exit, D=0, C=0, A=1 if at track0
+;
+E964 57                  MOV  D,A			; Save track ID
+E965 96                  SUB  M				; Compute difference
+E966 72                  MOV  M,D			; Save new track
+E967 C8                  RZ					; Already there
+E968 21 1D EB            LXI  H,$EB1D		; Assume Step IN
+E96B 4F                  MOV  C,A			; Set # tracks
+E96C F2 7B E9            JP   $E97B			; Assumption correct
+E96F 2F                  CMA				; Adjust to -number
+E970 3C                  INR  A				; of track
+E971 4F                  MOV  C,A			; And set new value
+E972 3A 10 EB            LDA  $EB10			; Read status
+E975 E6 01               ANI  $01			; At track 0
+E977 C0                  RNZ				; Can't step further
+E978 21 1C EB            LXI  H,$EB1C		; Set Step OUT
+E97B 7E                  MOV  A,M			; Set STEP high
+E97C 3A 09 EB            LDA  $EB09			; NOP, M0=1
+E97F E3                  XTHL				; Delay
+E980 E3                  XTHL				; Delay
+E981 3A 08 EB            LDA  $EB08			; Drop M0
+E984 16 02               MVI  D,$02			; Wait 2 sector times
+E986 CD D0 E9            CALL $E9D0			; Wait
+E989 3A 10 EB            LDA  $EB10			; Read status
+E98C E6 01               ANI  $01			; At track 0
+E98E CA 93 E9            JZ   $E993			; No, don't stop
+E991 0E 01               MVI  C,$01			; Abort step
+E993 0D                  DCR  C				; Reduce count
+E994 C2 7C E9            JNZ  $E97C			; Do them all
+E997 C9                  RET
+; Read complete - launch BOOT if no errors
+E998 C1                  POP  B				; Restore retry count
+E999 CA 04 20            JZ   $2004			; OK, launch OS
+E99C 05                  DCR  B				; Reduce count
+E99D C2 05 E9            JNZ  $E905			; Try again...
+E9A0 C3 A0 E9            JMP  $E9A0			; Give up (Hang)
+E9A3 00                  NOP
+E9A4 00                  NOP
+E9A5 00                  NOP
+E9A6 00                  NOP
+E9A7 00                  NOP
+E9A8 00                  NOP
+E9A9 00                  NOP
+E9AA 00                  NOP
+; Report failure - cleam stack & set Z/!Z
+E9AB C1                  POP  B
+E9AC B7                  ORA  A
+E9AD C9                  RET
+;
+; Read data sector from disk
+;
+E9AE 41                  MOV  B,C		; Zero checkval
+E9AF 1A                  LDAX D			; Read data byte
+E9B0 77                  MOV  M,A		; Write to RAM
+E9B1 A8                  XRA  B			; Compute
+E9B2 07                  RLC			; Check
+E9B3 47                  MOV  B,A		; Resave check
+E9B4 23                  INX  H			; Next RAM address
+E9B5 0D                  DCR  C			; Reduce count
+E9B6 C2 AF E9            JNZ  $E9AF		; Read them all
+E9B9 1A                  LDAX D			; Read check value
+E9BA A8                  XRA  B			; Does it match?
+E9BB CA C4 E9            JZ   $E9C4		; Yes, it's OK
+E9BE 78                  MOV  A,B		; ??
+E9BF 3E 02               MVI  A,$02		; Report CRC error
+E9C1 C3 AB E9            JMP  $E9AB		; And exit
+E9C4 F1                  POP  PSW		; [210E] Sector count
+E9C5 3D                  DCR  A			; Reduce count
+E9C6 C8                  RZ				; All done
+E9C7 F5                  PUSH PSW		; Resave count
+E9C8 CD CE E9            CALL $E9CE		; Wait 1 sector
+E9CB C3 4C E9            JMP  $E94C		; And read next
+;
+; Wait one sector time
+;
+E9CE 16 01               MVI  D,$01		; Single sector time
+;
+; Wait [D] sector times
+;
+E9D0 3A 14 EB            LDA  $EB14		; Reset sector flag
+E9D3 3A 90 EB            LDA  $EB90		; Read status
+E9D6 E6 80               ANI  $80		; Sector pulse?
+E9D8 CA D3 E9            JZ   $E9D3		; Wait for it
+E9DB 15                  DCR  D			; Reduce count
+E9DC C8                  RZ				; Finished
+E9DD C3 D0 E9            JMP  $E9D0		; Keep waiting
+;
+; Turn drive motors ON [C]=Drive
+;
+E9E0 3A 90 EB            LDA  $EB90			; Motors ON & statusA
+E9E3 E6 10               ANI  $10			; Already ON?
+E9E5 C2 F0 E9            JNZ  $E9F0			; Yes, short wait
+E9E8 16 32               MVI  D,$32			; Wait 32 sector times
+E9EA CD D0 E9            CALL $E9D0			; Wait
+E9ED C3 F5 E9            JMP  $E9F5			; And select drove
+E9F0 3A 03 20            LDA  $2003			; Get last drive
+E9F3 B9                  CMP  C				; Same drive?
+E9F4 C8                  RZ					; Yes, no need to wait
+E9F5 0A                  LDAX B				; Select new drive
+E9F6 79                  MOV  A,C			; Get drive ID
+E9F7 32 03 20            STA  $2003			; Set new flag
+E9FA 16 0D               MVI  D,$0D			; Wait 13 sector tiems
+E9FC C3 D0 E9            JMP  $E9D0			; Wait & return
+E9FF 00                  NOP
+-- -John email: john_crane_Z@yahoodotcom where: Z=12*5-1
+

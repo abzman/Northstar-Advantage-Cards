@@ -1,0 +1,1446 @@
+                ;*******************************************************
+                ;****       THIS IS THE NORTH STAR DISK OPERATING   ****
+                ;****  SYSTEM AS DIS-ASSEMBLED BY BARRY WATZMAN,    ****
+                ;****  CCP, CDP.  NO WARRANTIES ARE MADE AS TO      ****
+                ;****  THE CORRECTNESS OF THIS DIS-ASSEMBLY,        ****
+                ;****  THOUGH THE AUTHOR IS NOT AWARE OF ANY ERROR  ****
+                ;****  IN IT.  THIS WORK WAS DERIVED FROM VERSION   ****
+                ;****  2 RELEASE 3, WHICH INCLUDES LINE EDITING,    ****
+                ;****  AND INCLUDES THE FIX FOR THE 134 BLOCK       ****
+                ;****  LOCKUP BUG DISCOVERED BY THE AUTHOR          ****
+                ;****  (AT 24CFH).  NORTH STAR COMPUTERS INC. IS    ****
+                ;****  AWARE OF THIS PUBLICATION AND HAS AUTHORIZED ****
+                ;****  IT'S RELEASE ON A LIMITED WORD OF MOUTH ONLY ****
+                ;****  (NO ADVERTISING) BASIS IN AN AGREEMEMT       ****
+                ;****  BETWEEN DR. CHARLES GRANT AND THE AUTHOR IN  ****
+                ;****  NOV., 1977.  THE NORTH STAR DOS PROGRAM IS   ****
+                ;****  COPYRIGHT 1977 BY NORTH STAR COMPUTERS, INC. ****
+                ;****  THIS LISTING IS COPYRIGHT 1977 BY BARRY A.   ****
+                ;****  WATZMAN, CDP.  ADDITIONAL COPIES MAY BE      ****
+                ;****  OBTAINED FOR $25.00 FROM THE AUTHOR AT 2330  ****
+                ;****  MILLENNIUM LN., RESTON, VA. 22091.  THE      ****
+                ;****  AUTHOR WOULD APPRECIATE BEING NOTIFIED OF    ****
+                ;****  CORRECTIONS OR ADDITIONS TO THE UNCOMMENTED  ****
+                ;****  PORTIONS OF THE LISTING.                     ****
+                ;*******************************************************
+                ;;In year 2002 Mr. Watzman was asked about posting and
+                ;;providing this code. On Sat, 2 Feb 2002, Barry A. Watzman
+                ;;responded including these exerpts:
+                ;;
+                ;;"...I am the author - of [this] disassembly, but not of
+                ;;the original underlying (North Star) code - these files
+                ;;are exactly as they were in 1977... Everything you see
+                ;;is from 1977 / 1978."
+                ;;
+                ;;"I personally don't have any problems with your posting
+                ;;them for free download, but I want them posted exactly as
+                ;;they were (as I sent them to you), header and all, with a
+                ;;note that these are being posted exactly as they existed
+                ;;in 1977 (you can say that the address, and for that matter
+                ;;everything else, is as of 1977 and is no longer applicable,
+                ;;and give my E-Mail address].
+                ;;
+                ;;Barry Watzman, Watzman@neo.rr.com
+                ;PAGE
+                ;********************************************************
+                ;****  THE NORTH STAR DISK OPERATING SYSTEM AS       ****
+                ;****  DIS-ASSEMBLED BY BARRY A. WATZMAN, CDP        ****
+                ;********************************************************
+                ;****  THIS IS THE BOOT-STRAP ROUTINE IN PROM        ****
+                ;********************************************************
+ E800 =         BOARD	EQU	0E800H		;CONTROLLER BOARD ADDR
+ 00E8 =         BRD	EQU	0E8H		;BOARD PAGE
+ 2000 =         DOS	EQU	2000H		;DOS ADDRESS
+ 0004 =         SYNCF	EQU	04H		;SYNC CHAR FOUND-RDY TO READ
+ 000F =         SCTPS	EQU	0FH		;SECTOR POSITION MASK
+ 0001 =         TRAK0	EQU	01H		;TRACK ZERO MASK
+ 0010 =         MOTST	EQU	10H		;MOTOR ON TEST MASK
+ EB09 =         SETFF	EQU	BOARD+309H	;SET TRACK STEP FF
+ EB08 =         RESFF	EQU	BOARD+308H	;RESET TRACK STEP FF
+ EB90 =         ASTMS	EQU	BOARD+390H	;LOAD A STAT & START MOTR
+ EB10 =         ASTAT	EQU	BOARD+310H	;LOAD A STAT ONLY
+ EB30 =         BSTAT	EQU	BOARD+330H	;LOAD B STAT ONLY
+ EB14 =         RSFLG	EQU	BOARD+314H	;RESET SECTOR FLAG
+ EB1D =         STPIN	EQU	BOARD+31DH	;LOAD STEP DIR 'IN'
+ EB1C =         STPOU	EQU	BOARD+31CH	;LOAD STEP DIR 'OUT'
+ EB50 =         RDATA	EQU	BOARD+350H	;MASK TO READ DATA FROM DISK
+                ;********************************************************
+                ;**** THIS SECTION PERFORMS NECESSARY INITIALIZATION ****
+                ;**** SO THAT THE NORMAL BLOCK READ ROUTINE AT E91EH ****
+                ;**** MAY BE CALLED.  NOTE THAT THE MAX NO OF TRACK  ****
+                ;**** MOVEMENTS TO GET THE HEAD TO TRACK 0 IS 58 -   ****
+                ;**** THE AUTHOR APPARENTLY ADDED ONE FOR SAFETY BUT ****
+                ;**** FORGOT THAT THE 58 WAS DECIMAL, NOT HEX.       ****
+                ;********************************************************
+ E900           	ORG	BOARD+100H
+ E900 311421    	LXI	SP,DOS+114H
+ E903 060A      	MVI	B,10		;READ 10 TIMES THEN GIVE UP
+ E905 C5        LE905	PUSH	B
+ E906 3E59      	MVI	A,59H		;58D=MAX NO OF MOVES TO TRAK 0
+ E908 320020    	STA	DOS		;ASSUME HEAD AT WORST CASE LOC
+ E90B 320320    	STA	DRSEL		;NONE OF THREE DRIVES SELECTED
+ E90E 010100    	LXI	B,0001H		;B BECOMES DESIRED TRK;C=DRIVE
+ E911 79        	MOV	A,C		;READ ONLY 1 SECTOR
+ E912 1604      	MVI	D,4		;D=BLK TO BE READ WITHIN TRACK
+ E914 59        	MOV	E,C		;COMMAND;1 = READ
+ E915 210020    	LXI	H,DOS		;ADDRESS OF DOS TO BE LOADED
+ E918 CD1EE9    	CALL	LE91E		;MAIN PROCESSING LOOP
+ E91B C398E9    	JMP	CKBS		;IF OK EXIT ELSE RETRY OR DIE
+                ;********************************************************
+                ;**** THIS IS THE NORMAL READ ROUTINE.  THE ACC      ****
+                ;**** HAS THE NUMBER OF SECTORS TO BE READ.  REG B   ****
+                ;**** CONTAINS THE DESIRED TRACK, REGISTER C HAS     ****
+                ;**** THE DESIRED DRIVE AND REGISTER D CONTAINS THE  ****
+                ;**** DESIRED SECTOR (0-9) WITHIN THE TRACK.  THE    ****
+                ;**** DATA WILL BE LOADED BEGINNING AT H,L. TRAK2    ****
+                ;**** AND TRAK3 ARE INITIALIZED FROM THE DISK TO 59H ****
+                ;**** WHEN THE 1ST BLOCK IS READ IN; THE TEST FOR    ****
+                ;**** OLD TRK=59H IS REQD IN MULTIPLE DRIVE SYSTEMS  ****
+                ;**** WHERE THE 2ND & 3RD DRIVES MAY BE UNINITIALIZED****
+                ;**** FOR SOME TIME AFTER THE SYSTEM 1ST COMES UP.   ****
+                ;********************************************************
+ E91E F5        LE91E	PUSH	PSW
+ E91F E5        	PUSH	H
+ E920 D5        	PUSH	D
+ E921 C5        	PUSH	B
+ E922 06EB      	MVI	B,BRD+3		;CMNDS START AT 0EBH (C = 01H)
+ E924 CDE0E9    	CALL	MOTON		;MOTOR ON, SEL DRIVE, LOAD HEAD
+ E927 21FF34    	LXI	H,DOS-(BOARD+300H)-1
+ E92A 09        	DAD	B		;H = DOS + SELECTED DRIVE (1-3)
+ E92B 7E        	MOV	A,M		;GET CURRENT TRACK ADDRESS
+ E92C EE59      	XRI	59H		;STARTUP INIT. ALL 3 TO 59H
+ E92E E5        	PUSH	H
+ E92F CC64E9    	CZ	LE964		;WILL POSITION HEAD TO TRK 0
+ E932 E1        	POP	H
+ E933 F1        	POP	PSW		;PUSHED AS B - DESIRED TRACK
+ E934 CD64E9    	CALL	LE964		;POSITN HEAD TO TRK IN A
+ E937 C1        	POP	B		;PUSHED AS D - DESIRED SECTOR
+                ;********************************************************
+                ;**** THIS ROUTINE WAITS UNTIL WE HAVE THE DESIRED   ****
+                ;**** SECTOR AND THEN JUMPS TO EITHER 200AH OR 2007H ****
+                ;**** OR FALLS THRU TO READ DATA DEPENDING ON REG C  ****
+                ;**** WHICH IS THE COMMAND (0=WRITE, 1=READ, 2=VER)  ****
+                ;********************************************************
+ E938 CDCEE9    LE938	CALL	LE9CE		;WAIT FOR SECTOR FLAG
+ E93B 3A30EB    	LDA	BSTAT		;GET SECTOR POSITION
+ E93E E60F      	ANI	SCTPS		;MASK IT
+ E940 B8        	CMP	B		;IS IT THE ONE WE WANT?
+ E941 C238E9    	JNZ	LE938		;NO--WAIT FOR NEXT SECTOR
+ E944 E1        	POP	H		;PUSHED AS H-DATA LOAD ADDRESS
+ E945 0D        	DCR	C		;TO SET COMMAND FOR PROPER JUMP
+ E946 FA0AE8    	JM	BOARD+0AH	;RETURN FOR WRITE ROUTINE
+ E949 C207E8    	JNZ	BOARD+7H	;RETURN FOR VERIFY ROUTINE
+                ;********************************************************
+                ;**** THIS ROUTINE WAITS UNTIL IT IS TIME TO READ    ****
+                ;**** AND THEN JUMPS TO THE ACTUAL READ ROUTINE.  IF ****
+                ;**** A SYNC CHARACTER HAS NOT BEEN DETECTED WITHIN  ****
+                ;**** A SPECIFIED TIME FOLLOWING A SECTOR HOLE, THEN ****
+                ;**** THEN ACC IS SET NON-ZERO AND A JUMP TO AN ERROR****
+                ;**** ROUTINE IS MADE.                               ****
+                ;********************************************************
+ E94C 068C      LE94C	MVI	B,8CH		;MAX DELAY SECTOR TO SYNC CHAR
+ E94E 1150EB    	LXI	D,RDATA		;SET UP D TO READ ACTUAL DATA
+ E951 0E00      	MVI	C,0
+ E953 3A10EB    LE953	LDA	ASTAT		;LOAD A STAT INTO ACC
+ E956 E604      	ANI	SYNCF		;SYNC CHAR FOUND-RDY TO READ
+ E958 C2AEE9    	JNZ	READ		;TO DO ACTUAL READ
+ E95B 05        	DCR	B		;WAIT SOME MORE
+ E95C C253E9    	JNZ	LE953		;WE HAVEN'T REACHED LIMIT YET
+ E95F 3E01      	MVI	A,01H		;WE'RE IN TROUBLE
+ E961 C3ABE9    	JMP	LE9AB		;JUMP TO ERROR ROUTINE
+                ;********************************************************
+                ;**** THIS IS THE TRACK SELECT ROUTINE.  ENTER WITH  ****
+                ;**** DESIRED TRACK IN A AND H,L POINT TO CURRENT    ****
+                ;**** TRACK.  IT LOADS H,L WITH A DIRECTION SETTING  ****
+                ;**** ADDRESS AND PUTS NO OF STEPS REQD IN REG C.    ****
+                ;********************************************************
+ E964 57        LE964	MOV	D,A		;SAVE DESIRED TRACK
+ E965 96        	SUB	M		;SUBTRACT PRESENT TRACK
+ E966 72        	MOV	M,D		;STORE NEW TRACK ADDRESS
+ E967 C8        	RZ			;DONE IF OLD ADDR=NEW ADDR
+ E968 211DEB    	LXI	H,STPIN		;LOAD H STEP DIR 'IN'
+ E96B 4F        	MOV	C,A		;DIFFERENCE IS NO OF STEPS REQD
+ E96C F27BE9    	JP	LE97B		;GO STEP IT
+ E96F 2F        	CMA			;DIFF WAS NEG--NEED TO STEP OUT
+ E970 3C        	INR	A		;INVRT THE NEG NO OF STEPS REQD
+ E971 4F        	MOV	C,A		;NO OF STEPS 'OUT' REQD IN C
+ E972 3A10EB    	LDA	ASTAT		;ALREADY ALL THE WAY OUT?
+ E975 E601      	ANI	TRAK0		;TRACK 0 FLAG
+ E977 C0        	RNZ			;YES--CAN'T GO OUT ANY FURTHER
+ E978 211CEB    	LXI	H,STPOU		;LOAD H STEP DIR 'OUT'
+                ;********************************************************
+                ;**** THIS ROUTINE ACTUALLY DOES THE HEAD STEPPING.  ****
+                ;********************************************************
+ E97B 7E        LE97B	MOV	A,M		;SET DIR FF AS PER H REG
+ E97C 3A09EB    LE97C	LDA	SETFF		;SET TRACK STEP FF
+ E97F E3        	XTHL			;SHORT TIME DELAY
+ E980 E3        	XTHL			;MORE DELAY (MIN 10 USEC TOTAL)
+ E981 3A08EB    	LDA	RESFF		;RESET TRACK STEP FF
+ E984 1602      	MVI	D,02H		;WAIT 2 SECTOR TIMES (40 MSEC)
+ E986 CDD0E9    	CALL	DELAY
+ E989 3A10EB    	LDA	ASTAT		;FIND OUT WHERE WE'RE AT
+ E98C E601      	ANI	TRAK0		;TRACK ZERO?
+ E98E CA93E9    	JZ	LE993		;JUMP IF NOT TRACK 0
+ E991 0E01      	MVI	C,01H		;WERE ALL WAY OUT-SET C TO STOP
+ E993 0D        LE993	DCR	C		;NEED MORE STEPS?
+ E994 C27CE9    	JNZ	LE97C		;YES--CONTINUE STEPPING
+ E997 C9        	RET			;NO--WERE DONE,	RETURN.
+                ;********************************************************
+                ;**** THIS IS THE ERROR ROUTINE FOR THE BOOTSRAP ONLY****
+                ;********************************************************
+ E998 C1        CKBS	POP	B		;B IS CONDITION CODE
+ E999 CA04E8    	JZ	BOARD+4H	;OK--JMP TO LOADED 1ST BLOCK
+ E99C 05        	DCR	B		;IF HARD ERROR, TRY 10 TIMES
+ E99D C205E9    	JNZ	LE905		;TRY AGAIN
+ E9A0 C3A0E9    DIE	JMP	DIE		;HARD ERROR IN BS, NO RECOVERY
+ E9A3 00        	NOP
+ E9A4 00        	NOP
+ E9A5 00        	NOP
+ E9A6 00        	NOP
+ E9A7 00        	NOP
+ E9A8 00        	NOP
+ E9A9 00        	NOP
+ E9AA 00        	NOP
+                ;********************************************************
+                ;**** THIS SETS UP B FOR HANDLING BY THE ERR ROUTINE ****
+                ;**** POPS STACK & 0'S REG A SO CKBS WILL DET ERROR  ****
+                ;********************************************************
+ E9AB C1        LE9AB	POP	B
+ E9AC B7        	ORA	A
+ E9AD C9        	RET
+                ;********************************************************
+                ;**** THIS IS THE ACTUAL DATA READ ROUTINE.          ****
+                ;********************************************************
+ E9AE 41        READ	MOV	B,C		;MOVE 0 TO B
+ E9AF 1A        READ1	LDAX	D		;THIS IS THE ACTUAL DATA READ
+ E9B0 77        	MOV	M,A		;STORE DATA IN MEMORY
+ E9B1 A8        	XRA	B		;I THINK THIS ADDS TO CKSUM
+ E9B2 07        	RLC			;THIS TOO
+ E9B3 47        	MOV	B,A		;MOVE PARTIAL CKSUM TO B
+ E9B4 23        	INX	 H		;SET H FOR NEXT BYTE
+ E9B5 0D        	DCR	C		;GOING TO READ 256 BYTES & CKSUM
+ E9B6 C2AFE9    	JNZ	READ1		;READ MORE DATA
+ E9B9 1A        	LDAX	D		;READ THE CHECKSUM FROM DISK
+ E9BA A8        	XRA	B		;COMPARE IT WITH CALCULATED CKSUM
+ E9BB CAC4E9    	JZ	LE9C4		;IF THEY ARE SAME GO ON
+ E9BE 78        	MOV	A,B		;?--CAN'T FIGURE THIS ONE OUT
+ E9BF 3E02      	MVI	A,02H		;SET A NON-ZERO TO DETECT ERROR
+ E9C1 C3ABE9    	JMP	LE9AB		;JUMP TO THE ERROR HANDLER
+ E9C4 F1        LE9C4	POP	PSW		;GET NO OF SECTORS TO BE READ
+ E9C5 3D        	DCR	A		;DECREMENT IT
+ E9C6 C8        	RZ			;RETURN IF DONE
+ E9C7 F5        	PUSH	PSW		;SAVE IT
+ E9C8 CDCEE9    	CALL	LE9CE		;WAIT FOR SECTOR HOLE
+ E9CB C34CE9    	JMP	LE94C		;WAIT FOR SYNC & READ NXT SECTR
+                ;********************************************************
+                ;**** DELAY ROUTINE; DELAY IS NO OF SECTOR TIMES IN  ****
+                ;**** THE D REGISTER.                                ****
+                ;********************************************************
+ E9CE 1601      LE9CE	MVI	D,01H		;HERE TO RET WHEN SCTR FOUND
+ E9D0 3A14EB    DELAY	LDA	RSFLG		;RESET SECTOR FLAG
+ E9D3 3A90EB    TSTSF	LDA	ASTMS		;LOAD A STATUS REG TO ACC
+ E9D6 E680      	ANI	80H		;MASK SECTOR FLAG
+ E9D8 CAD3E9    	JZ	TSTSF		;TEST SECTOR FLAG
+ E9DB 15        	DCR	D
+ E9DC C8        	RZ			;IF ZERO WE'RE DONE
+ E9DD C3D0E9    	JMP	DELAY		;GIVE IT MORE TIME
+                ;********************************************************
+                ;**** THIS ROUTINE STARTS THE MOTOR, WAITS 5 REV (50 ****
+                ;**** SECTOR TIMES) FOR IT TO COME UP, LOADS HEAD &  ****
+                ;**** DRIVE SELECT REG (USING CONTENTS OF C REGISTER)****
+                ;**** STORES SELECTED DRIVE AT 2003H & DELAYS 13     ****
+                ;**** SECTOR TIMES FOR HEAD TO SETTLE FROM LOAD.     ****
+                ;**** IF MOTOR WAS ALREADY ON, CHECKS DRIVE CURRENTLY****
+                ;**** SELECTED (2003H) VS DRIVE REQUESTED IN REG C   ****
+                ;**** IF THEY ARE SAME, SKIPS HEAD LOAD SETTLE DELAY.****
+                ;****      ON ENTRY, C=DESIRED DRIVE, B=0EBH.        ****
+                ;********************************************************
+ E9E0 3A90EB    MOTON	LDA	ASTMS		;LOAD A STAT & START MOTOR
+ E9E3 E610      	ANI	MOTST		;MASK MOTOR ON TEST BIT
+ E9E5 C2F0E9    	JNZ	CKDRV		;JUMP IF MOTOR ON
+ E9E8 1632      	MVI	D,32H		;5 REV TO SPEED UP
+ E9EA CDD0E9    	CALL	DELAY
+ E9ED C3F5E9    	JMP	LHSD		;LOAD HEAD & SELECT DRIVE
+ E9F0 3A0320    CKDRV	LDA	DRSEL		;GET DRIVE CUR SELECTED IN ACC
+ E9F3 B9        	CMP	C		;C HAS DRIVE WE WANT--SAME?
+ E9F4 C8        	RZ			;YES--HEAD IS LOADED, SKIP DELAY
+ E9F5 0A        LHSD	LDAX	B		;LOAD HEAD & DR SEL REG USING C
+ E9F6 79        	MOV	A,C		;MOVE SELECTED DRIVE TO ACC
+ E9F7 320320    	STA	DRSEL		;STORE IT
+ E9FA 160D      	MVI	D,0DH		;SETTLE TIME FROM HEAD LOAD
+ E9FC C3D0E9    	JMP	DELAY
+ 2000           DEFST	ORG	DOS
+ 2000           TRAK1	DS	1		;STORE HEAD LOC (TRACK) DRIVE #1
+ 2001           TRAK2	DS	1		;STORE HEAD LOC (TRACK) DRIVE #2
+ 2002           TRAK3	DS	1		;STORE HEAD LOC (TRACK) DRIVE #3
+ 2003 01        DRSEL	DB	1		;DRIVE CURRENTLY SELECTED
+ 2004 C35A20    LEVL2	JMP	DOS+5AH		;ENTRY TO 2ND LEVEL BOOT
+ 2007 C35F27    VERFY	JMP	DOS+75FH	;RE-ENTRY TO VERIFY ROUTINE
+ 200A C38E27    WRITE	JMP	DOS+78EH	;RE-ENTRY TO WRITE ROUTINE
+                	;PAGE
+                ;*********************************************************
+                ;**** THE NORTH STAR DOS AS DIS-ASSEMBLED BY BARRY A. ****
+                ;**** WATZMAN, CCP, CDP.  COPYRIGHT 1977 BY NORTH     ****
+                ;**** STAR COMPUTERS AND BARRY A. WATZMAN.            ****
+                ;*********************************************************
+                ;**** THE MAIN DOS STARTS HERE.                       ****
+                ;*********************************************************
+ E800 =         BOARD	EQU	0E800H		;LOCATION OF NORTH STAR BOARD
+ 00E8 =         BRD	EQU	0E8H		;HIGH ORDER BYTE OF BOARD
+ 2000 =         DOS	EQU	2000H		;ADDR OF DOS
+ E91E =         LE91E	EQU	BOARD+11EH	;READ ROUTINE IN PROM BOOTSTRAP
+ E9CE =         LE9CE	EQU	BOARD+1CEH	;RETURN ON NEXT SCTR FOUND FLAG
+ EB90 =         LEB90	EQU	BOARD+390H	;LOAD A STAT REG & START MOTOR
+ E9D0 =         LE9D0	EQU	BOARD+1D0H	;SECTOR BASED DELAY ROUTINE
+ EB10 =         LEB10	EQU	BOARD+310H	;LOAD A STATUS REG
+ E9AB =         LE9AB	EQU	BOARD+1ABH	;ERROR HNDLER IN PROM BOOTSTRAP
+ EB04 =         LEB04	EQU	BOARD+304H	;START A WRITE SECTOR SEQUENCE
+ 000F =         NCOM	EQU	15		;NO OF ENTRIES IN COMD TABLE
+ 2000           	ORG	DOS
+ 2000 00        TRAK1	DB	0		;CUR TRK LOCATION OF HEAD DR #1
+ 2001 59        TRAK2	DB	59H		;SAME DR #2
+ 2002 59        TRAK3	DB	59H		;SAME DR #3
+ 2003 01        DRSEL	DB	1		;DRIVE CURRENTLY SELECTED
+ 2004 C35A20    BOOT2	JMP	STACK		;ENTRY TO 2ND LEVEL BOOTSTRAP
+ 2007 C35F27    	JMP	L275F		;VERIFY ROUTINE
+ 200A C38E27    L200A	JMP	L278E		;WRITE ROUTINE
+ 200D C30D20    COUT	JMP	COUT		;REPL W JMP TO CHAR OUT ROUTINE
+ 2010 C31020    CIN	JMP	CIN		;REPL W JMP TO KYBD INP ROUTINE
+ 2013 C31320    TINIT	JMP	TINIT		;REPL W JMP TO INIT ROUT IF ANY
+ 2016 C31620    CONTC	JMP	CONTC		;REPL W JMP TO CNTL C ROUTINE
+ 2019 C3B720    HDERR	JMP	DSKER		;HARD DISK ERROR ROUTINE
+ 201C C39923    DLOOK	JMP	L2399		;DIRECTORY LOOKUP ROUTINE
+ 201F C30E24    DWRIT	JMP	L240E		;DIRECTORY WRITE ROUTINE
+ 2022 C35F24    DCOM	JMP	DCOMD		;TO ISSUE DISK COMMAND
+ 2025 C33A21    LIST	JMP	LICMD+3		;DIRECTORY LIST ROUTINE
+ 2028 C38220    BEGIN	JMP	START		;ENTRY FOR LOADED DOS
+ 202B 00        RWCHK	DB	0		;READ AFTR WRIT CK IF 1
+ 202C           	DS	46		;RESERVED FOR STACK
+                ;**********************************************************
+                ;****  2ND LEVEL BOOT LOADS DISK ADDRS. 5-13 AT 2100H. ****
+                ;**********************************************************
+ 205A 315A20    STACK	LXI	SP,STACK
+ 205D 3E05      	MVI	A,5		;5 BLKS
+ 205F 010100    	LXI	B,1		;TRACK 0 DRIVE 1
+ 2062 110105    	LXI	D,0501H		;SECTOR 5, READ
+ 2065 210021    	LXI	H,DOS+100H	;PUT THEM AT 2100H (STD VER)
+ 2068 CD1EE9    	CALL	LE91E		;DO IT
+ 206B C25A20    	JNZ	STACK		;ON ERROR(?)
+ 206E 3E04      	MVI	A,4		;4 BLKS
+ 2070 010101    	LXI	B,0101H		;TRACK 1, DRIVE 1
+ 2073 110100    	LXI	D,1		;SECTOR 0, READ
+ 2076 210026    	LXI	H,DOS+600H	;PUT THEM AT 2600H (STD VER)
+ 2079 CD1EE9    	CALL	LE91E		;DO IT
+ 207C C25A20    	JNZ	STACK		;ON ERROR(?)
+ 207F CD1320    	CALL	TINIT		;START MAIN DOS
+                ;**********************************************************
+                ;**** MAIN DOS STARTS HERE.                            ****
+                ;**********************************************************
+ 2082 315A20    START	LXI	SP,STACK	;SET STACK
+ 2085 21B720    	LXI	H,DOS+0B7H	;?--DOES NOT SEEM NECESSARY
+ 2088 221A20    	SHLD	HDERR+1
+ 208B 062A      	MVI	B,'*'		;GET THE PROMPT
+ 208D CD0B27    	CALL	PRINT		;PRINT IT
+ 2090 CD2826    	CALL	GETLN		;GET A COMMAND LINE FROM INPUT
+ 2093 21C027    	LXI	H,LNBUF		;POINT H,L TO COMMAND
+ 2096 CD1E27    	CALL	LDDEM		;LOAD IT TO D,E
+ 2099 21EF20    	LXI	H,CMDTB		;POINT H,L TO COMMAND TABLE
+ 209C 060F      	MVI	B,NCOM		;B HAS NO OF COMMANDS IN TABLE
+ 209E CD5727    TYNXT	CALL	COMPR		;LOOK FOR MATCH
+ 20A1 23        	INX	H		;TO ADDR FOR COMD JUST TESTED
+ 20A2 23        	INX	H
+ 20A3 CAE620    	JZ	DOIT		;COMMANDS MATCHED--SET IT UP
+ 20A6 23        	INX	H		;NO MATCH-POINT TO NXT COMMAND
+ 20A7 23        	INX	H
+ 20A8 05        	DCR	B		;DCR NO OF COMDS LEFT TO TEST
+ 20A9 C29E20    	JNZ	TYNXT		;NOT DONE-TEST NEXT COMMAND
+ 20AC 063F      WHAT	MVI	B,'?'		;OPPS-NONE OF COMDS MATCHED
+ 20AE CD0B27    	CALL	PRINT
+ 20B1 CD0F27    CRLFR	CALL	CRLF
+ 20B4 C38220    	JMP	START
+                ;**********************************************************
+                ;**** HARD DISK ERROR ROUTINE.  C=DRIVE NO.; B=TRACK;  ****
+                ;**********************************************************
+ 20B7 D5        DSKER	PUSH	D
+ 20B8 C5        	PUSH	B
+ 20B9 79        	MOV	A,C		;GET DRIVE
+ 20BA C630      	ADI	30H		;CONVERT TO ASCII
+ 20BC 47        	MOV	B,A
+ 20BD CD0B27    	CALL	PRINT
+ 20C0 CD0927    	CALL	PSPAC		;PRINT DRIVE FOLLOWED BY SPACE
+ 20C3 C1        	POP	B
+ 20C4 68        	MOV	L,B		;SET TRACK (0-34) IN H,L
+ 20C5 2600      	MVI	H,0
+ 20C7 CDDF26    	CALL	TDDPT		;TWO DIGIT DECIMAL PRT ROUTINE
+ 20CA D1        	POP	D
+ 20CB 21BF27    	LXI	H,DOS+7BFH
+ 20CE 3ABE27    	LDA	L27BE
+ 20D1 96        	SUB	M
+ 20D2 82        	ADD	D
+ 20D3 C630      	ADI	30H		;CONVERT TO ASCII
+ 20D5 47        	MOV	B,A
+ 20D6 CD0B27    	CALL	PRINT
+ 20D9 0648      	MVI	B,'H'
+ 20DB CD0B27    	CALL	PRINT
+ 20DE 0644      	MVI	B,'D'
+ 20E0 CD0B27    	CALL	PRINT
+ 20E3 C3AC20    	JMP	WHAT
+                ;**********************************************************
+                ;****  ROUTINE TO JMP TO COMMAND ADDR & COMMAND TABLE. ****
+                ;**********************************************************
+ 20E6 CD1E27    DOIT	CALL	LDDEM		;GET CMND ADDR IN D,E
+ 20E9 EB        	XCHG			;TO H,L
+ 20EA 118220    	LXI	D,START
+ 20ED D5        	PUSH	D		;SET UP SO RET RESTARTS DOS
+ 20EE E9        	PCHL			;DO IT
+ 20EF 4352      CMDTB	DB	'CR'
+ 20F1 3122      	DW	CRCMD
+ 20F3 4445      	DB	'DE'
+ 20F5 2B21      	DW	DECMD
+ 20F7 474F      	DB	'GO'
+ 20F9 4921      	DW	GOCMD
+ 20FB 4A50      	DB	'JP'
+ 20FD 4221      	DW	JPCMD
+ 20FF 5244      	DB	'RD'
+ 2101 FF21      	DW	RDCMD
+ 2103 5752      	DB	'WR'
+ 2105 0422      	DW	WRCMD
+ 2107 4454      	DB	'DT'
+ 2109 1523      	DW	DTCMD
+ 210B 494E      	DB	'IN'
+ 210D C422      	DW	INCMD
+ 210F 4C49      	DB	'LI'
+ 2111 3721      	DW	LICMD
+ 2113 5459      	DB	'TY'
+ 2115 6921      	DW	TYCMD
+ 2117 4C46      	DB	'LF'
+ 2119 D421      	DW	LFCMD
+ 211B 5346      	DB	'SF'
+ 211D D921      	DW	SFCMD
+ 211F 4346      	DB	'CF'
+ 2121 8F21      	DW	CFCMD
+ 2123 4344      	DB	'CD'
+ 2125 3323      	DW	CDCMD
+ 2127 434F      	DB	'CO'
+ 2129 7C22      	DW	COCMD
+                ;**********************************************************
+                ;****  DELETE COMMAND.  ERASES FILE NAME IN DIRECTORY. ****
+                ;**********************************************************
+ 212B CDB123    DECMD	CALL	L23B1		;GET NAME, DRIVE, DO LOOKUP
+ 212E CD5027    	CALL	L2750		; ?
+ 2131 CD0424    	CALL	L2404		;PUT SPACES IN FILE-NAME BUFFER
+ 2134 C30E24    	JMP	L240E		;WRITE DIRECTORY BLK BACK TO DISK
+                ;**********************************************************
+                ;**** LIST COMMAND (LIST DISK DIRECTORY).              ****
+                ;**********************************************************
+ 2137 CD2327    LICMD	CALL	GTDRV		;GET UNIT IF SPECIFIED
+ 213A 32EE28    	STA	L28EE		;DRIVE IN ACC FOR EXTERNAL LISTS
+ 213D 3E01      	MVI	A,1		;1=LIST COMMAND
+ 213F C30D25    	JMP	L250D		;DO IT
+                ;**********************************************************
+                ;****  JPCMD.  JUMP (EXEC) COMMAND.                    ****
+                ;**********************************************************
+ 2142 CD5F26    JPCMD	CALL	HXBIN		;CONVERT ADDRESS TO BIN IN H,L
+ 2145 CD5027    	CALL	L2750		;MAKE SURE IT IS END OF INPUT LINE
+ 2148 E9        	PCHL			;GO TO IT
+                ;**********************************************************
+                ;****  GO COMMAND.  LOADS FILE & JUMPS TO GO ADDRESS.  ****
+                ;**********************************************************
+ 2149 CDB123    GOCMD	CALL	L23B1		;GET NAME, DRIVE & DO DIR LOOKUP
+ 214C 4F        	MOV	C,A		;DRIVE TO REG C
+ 214D CD5027    	CALL	L2750		; ?
+ 2150 CD1E27    	CALL	LDDEM		;GET DISK ADDRESS
+ 2153 D5        	PUSH	D		;PUSH	IT
+ 2154 CD1E27    	CALL	LDDEM		;GET DISK LENGTH
+ 2157 7E        	MOV	A,M		;GET TYPE
+ 2158 23        	INX	H		;POINT TO GO ADDRESS
+ 2159 FE01      	CPI	1		;TYPE = 1 ?
+ 215B C2AC20    	JNZ	WHAT		;NO--REPORT ERROR
+ 215E 7B        	MOV	A,E		;YES--LENGTH TO A (NOTE 256 MAX)
+ 215F CD1E27    	CALL	LDDEM		;GET GO ADDRESS
+ 2162 E1        	POP	H		;DISK ADDRESS TO H,L
+ 2163 D5        	PUSH	D		;PUSH GO ADDR SO FINAL RET JMPS
+ 2164 0601      	MVI	B,1		;1=READ
+ 2166 C35F24    	JMP	DCOMD		;DO THE READ
+                ;**********************************************************
+                ;****  TYPE COMMAND.  ADDS TYPE & GO ADDR TO DIR ENTRY ****
+                ;**********************************************************
+ 2169 CDB123    TYCMD	CALL	L23B1		;GET NAME, DRIVE & DO DIR LOOKUP
+ 216C 110400    	LXI	D,4		;SET UP TO POINT TO TYPE BYTE
+ 216F 19        	DAD	D
+ 2170 E5        	PUSH	H		;SAVE POINTER
+ 2171 CD9526    	CALL	DCBIN		;CONVERT DECIMAL TYPE TO BINARY
+ 2174 DAAC20    	JC	WHAT		;IF TYPE KEYED IN NOT LEGAL
+ 2177 7D        	MOV	A,L		;BINARY TYPE TO ACC
+ 2178 E1        	POP	H		;GET BACK POINTER
+ 2179 77        	MOV	M,A		;CHANGE TYPE
+ 217A FE01      	CPI	1		;TYPE = 1 (EG, NEED GO ADDR) ?
+ 217C C28921    	JNZ	L2189		;NO--WRITE DIRECTORY BLK BACK
+ 217F E5        	PUSH	H		;SAVE POINTER
+ 2180 CD5F26    	CALL	HXBIN		;CONVERT ASCII HEX GA TO BINARY
+ 2183 EB        	XCHG			;MOVE IT TO D,E
+ 2184 E1        	POP	H		;GET BACK POINTER
+ 2185 23        	INX	H		;POINT TO GO ADDRESS
+ 2186 CD1927    	CALL	LDMDE		;PUT NEW GA (D,E) THERE
+ 2189 CD5027    L2189	CALL	L2750		;END OF COMMAND ?
+ 218C C30E24    	JMP	L240E		;YES--WRITE UPDATD DIR BACK TO DSK
+                ;**********************************************************
+                ;****  CF (COPY FILE) COMMAND.                         ****
+                ;**********************************************************
+ 218F CDB123    CFCMD	CALL	L23B1
+ 2192 3AEE28    	LDA	L28EE
+ 2195 32C027    	STA	LNBUF
+ 2198 CD1E27    	CALL	LDDEM
+ 219B D5        	PUSH	D
+ 219C CD1E27    	CALL	LDDEM
+ 219F D5        	PUSH	D
+ 21A0 CD1E27    	CALL	LDDEM
+ 21A3 D5        	PUSH	D
+ 21A4 CD1E27    	CALL	LDDEM
+ 21A7 D5        	PUSH	D
+ 21A8 CDB123    	CALL	L23B1
+ 21AB CD5027    	CALL	L2750
+ 21AE 010700    	LXI	B,7
+ 21B1 09        	DAD	B
+ 21B2 C1        	POP	B
+ 21B3 70        	MOV	M,B
+ 21B4 2B        	DCX	H
+ 21B5 71        	MOV	M,C
+ 21B6 C1        	POP	B
+ 21B7 2B        	DCX	H
+ 21B8 70        	MOV	M,B
+ 21B9 2B        	DCX	H
+ 21BA 71        	MOV	M,C
+ 21BB 2B        	DCX	H
+ 21BC 2B        	DCX	H
+ 21BD D1        	POP	D
+ 21BE D5        	PUSH	D
+ 21BF 1B        	DCX	D
+ 21C0 CD5727    	CALL	COMPR
+ 21C3 D2AC20    	JNC	WHAT
+ 21C6 2B        	DCX	H
+ 21C7 56        	MOV	D,M
+ 21C8 2B        	DCX	H
+ 21C9 5E        	MOV	E,M
+ 21CA D5        	PUSH	D
+ 21CB CD0E24    	CALL	L240E
+ 21CE E1        	POP	H
+ 21CF C1        	POP	B
+ 21D0 D1        	POP	D
+ 21D1 C34F23    	JMP	L234F
+                ;**********************************************************
+                ;****  LF & SF (LOAD FILE / SAVE FILE) COMMANDS.       ****
+                ;**********************************************************
+ 21D4 0601      LFCMD	MVI	B,1		;1 = READ COMMAND
+ 21D6 C3DB21    	JMP	L21DB
+ 21D9 0600      SFCMD	MVI	B,0		;0 = WRITE COMMAND
+ 21DB C5        L21DB	PUSH	B		;SAVE COMMAND
+ 21DC CDB123    	CALL	L23B1		;GET FILENAME, UNIT, DO LOOKUP
+ 21DF C1        	POP	B		;GET BACK COMMAND
+ 21E0 3AEE28    	LDA	L28EE		;GET DRIVE
+ 21E3 4F        	MOV	C,A		;TO REG C
+ 21E4 C5        	PUSH	B		;SAVE COMMAND
+ 21E5 CD1E27    	CALL	LDDEM		;GET DISK ADDRESS
+ 21E8 D5        	PUSH	D		;SAVE IT
+ 21E9 CD1E27    	CALL	LDDEM		;GET DISK LENGTH
+ 21EC 7B        	MOV	A,E		;MOVE IT TO ACC.
+ 21ED F5        	PUSH	PSW		;SAVE DISK LENGTH
+ 21EE CD5F26    	CALL	HXBIN		;CONVERT LOAD ADDR TO BIN IN HL
+ 21F1 EB        	XCHG			;MOVE IT TO D,E
+ 21F2 CD5027    	CALL	L2750		;MAKE SURE IT'S END OF COMMAND
+ 21F5 F1        	POP	PSW		;GET BACK DISK LENGTH
+ 21F6 E1        	POP	H		;GET BACK DISK ADDRESS
+ 21F7 C1        	POP	B		;GET BACK COMMAND & UNIT
+ 21F8 CD5F24    L21F8	CALL	DCOMD		;DO IT
+ 21FB DAAC20    	JC	WHAT		;ON ERROR
+ 21FE C9        	RET			;DONE
+                ;**********************************************************
+                ;****  RD & WR (READ & WRITE SINGLE BLOCK) COMMANDS.   ****
+                ;**********************************************************
+ 21FF 0601      RDCMD	MVI	B,1		;1 = READ COMMAND
+ 2201 C30622    	JMP	L2206
+ 2204 0600      WRCMD	MVI	B,0		;0 = WRITE COMMAND
+ 2206 CD9526    L2206	CALL	DCBIN		;GET DISK ADDR TO R/W IN H,L
+ 2209 DAAC20    	JC	WHAT		;ON ERROR
+ 220C E5        	PUSH	H		;SAVE DISK ADDRESS
+ 220D 0E01      	MVI	C,1		;SET DEFAULT UNIT
+ 220F FE20      	CPI	' '		;SEE IF SPACE FOLLOWS DISK ADDR
+ 2211 CA1C22    	JZ	L221C		;YES--GET RAM ADDRESS
+ 2214 FE2C      	CPI	','		;NO--DOES COMMA FOLLOW DISK ADDR?
+ 2216 C2AC20    	JNZ	WHAT		;ONLY ' ' & ',' MAY FOLLOW D.A.
+ 2219 CD2327    	CALL	GTDRV		;COMMA FOLLOWS D.A.--GET DRIVE
+ 221C CD5F26    L221C	CALL	HXBIN		;CNVRT HEX ADDR TO BIN IN HL
+ 221F E5        	PUSH	H		;SAVE IT
+ 2220 CD9526    	CALL	DCBIN		;CONVERT NO. OF BLOCKS TO BINARY
+ 2223 7D        	MOV	A,L		;MOVE IT TO ACC (256 MAX)
+ 2224 D1        	POP	D		;GET BACK RAM ADDRESS
+ 2225 E1        	POP	H		;GET BACK DISK ADDRESS
+ 2226 C3F821    	JMP	L21F8		;DO IT
+                ;**********************************************************
+ 2229           BLKBF	DS	8		;BLANK FILE-NAME
+                ;**********************************************************
+                ;****  CR (CREATE FILE) COMMAND.                       ****
+                ;**********************************************************
+ 2231 CDBB23    CRCMD	CALL	L23BB		;GET DRIVE #, FILE NAME
+ 2234 CD0C25    	CALL	L250C		;LOOK UP FILE NAME
+ 2237 D2AC20    	JNC	WHAT		;IF IT ALREADY EXISTS
+ 223A E5        	PUSH	H		;ADDRESS OF 1ST FREE BLOCK
+ 223B 112922    	LXI	D,BLKBF		;PTR TO BLANKED OUT FILE NAME AREA
+ 223E CD0C25    	CALL	L250C		;FIND 1ST BLANK DIR ENTRY
+ 2241 DAAC20    	JC	WHAT		;IF NONE EXISTS
+ 2244 E3        	XTHL			;1ST FREE TO HL, DIR PTR TO STACK
+ 2245 E5        	PUSH	H		;PUSH	1ST FREE BLOCK
+ 2246 CD9526    	CALL	DCBIN		;GET LENGTH
+ 2249 DAAC20    	JC	WHAT		;LENGTH MISSING OR INVALID
+ 224C E3        	XTHL			;LEN TO STACK TOP, HL=1ST FREE BLK
+ 224D CD9526    	CALL	DCBIN		;REPL HL WITH ADDR IN CMD IF ANY
+ 2250 CD5027    	CALL	L2750		;END OF COMD REQD
+ 2253 EB        	XCHG			;START ADDR TO D,E
+ 2254 21A1FE    	LXI	H,-351		;SET UP TO TEST LENGTH, START ADDR
+ 2257 C1        	POP	B		;GET LENGTH
+ 2258 09        	DAD	B		;ADD TO -MAX	LENGTH
+ 2259 DAAC20    	JC	WHAT		;IF TOO LONG
+ 225C 19        	DAD	D		;ADD STARTING ADDR
+ 225D DAAC20    	JC	WHAT		;IF NOT ENOUGH ROOM LEFT ON DISK
+ 2260 E1        	POP	H		;GET POINTR TO 9TH BYTE IN RAM DIR
+ 2261 E5        	PUSH	H		;PUT IT BACK
+ 2262 CD1927    	CALL	LDMDE		;PUT START ADDR IN RAM DIR ENTRY
+ 2265 71        	MOV	M,C		;MOVING LENGTH TO RAM DIR ENTRY
+ 2266 23        	INX	H		;CONTINUED
+ 2267 70        	MOV	M,B		;CONTINUED
+ 2268 23        	INX	H		;CONTINUED
+ 2269 3600      	MVI	M,0		;DEFAULT TYPE
+ 226B E1        	POP	H		;POINT BACK TO END OF NAME
+ 226C 11ED28    	LXI	D,DOS+8EDH	;DE POINT TO END OF NAME BUFFER
+ 226F 0608      	MVI	B,8		;NO OF CHAR IN FILE NAME
+ 2271 2B        L2271	DCX	H		;MOVING NAME TO RAM DIR ENTRY
+ 2272 1A        	LDAX	D		;CONTINUED
+ 2273 77        	MOV	M,A		;CONTINUED
+ 2274 1B        	DCX	D		;CONTINUED
+ 2275 05        	DCR	B		;CONTINUED
+ 2276 C27122    	JNZ	L2271		;IF NOT DONE
+ 2279 C30E24    	JMP	L240E		;WRITE DIRECTORY BACK TO DISK
+                ;**********************************************************
+                ;****  CO (COMPRESS DISKETTE) COMMAND.                 ****
+                ;**********************************************************
+ 227C CD2327    COCMD	CALL	GTDRV
+ 227F 32C027    	STA	LNBUF
+ 2282 CD5027    	CALL	L2750
+ 2285 210400    	LXI	H,4
+ 2288 E5        L2288	PUSH	H
+ 2289 3E02      	MVI	A,2
+ 228B CD0D25    	CALL	L250D
+ 228E DA9B22    	JC	L229B
+ 2291 23        	INX	H
+ 2292 23        	INX	H
+ 2293 CD1E27    	CALL	LDDEM
+ 2296 E1        	POP	H
+ 2297 19        	DAD	D
+ 2298 C38822    	JMP	L2288
+ 229B D1        L229B	POP	D
+ 229C 3AF128    	LDA	L28F1
+ 229F B7        	ORA	A
+ 22A0 C0        	RNZ	
+ 22A1 2AF428    	LHLD	L28F4
+ 22A4 E5        	PUSH	H
+ 22A5 D5        	PUSH	D
+ 22A6 3E02      	MVI	A,2
+ 22A8 CD0D25    	CALL	L250D
+ 22AB D1        	POP	D
+ 22AC D5        	PUSH	D
+ 22AD CD1927    	CALL	LDMDE
+ 22B0 CD1E27    	CALL	LDDEM
+ 22B3 D5        	PUSH	D
+ 22B4 CD0E24    	CALL	L240E
+ 22B7 C1        	POP	B
+ 22B8 E1        	POP	H
+ 22B9 D1        	POP	D
+ 22BA E5        	PUSH	H
+ 22BB 09        	DAD	B
+ 22BC E3        	XTHL
+ 22BD CD4F23    	CALL	L234F
+ 22C0 E1        	POP	H
+ 22C1 C38822    	JMP	L2288
+                ;**********************************************************
+                ;****  IN (INITIALIZE BLANK DISKETTE) COMMAND.         ****
+                ;****  THE "INCREMENT" IS FOR THE DT COMD & IS 0 HERE. ****
+                ;**********************************************************
+ 22C4 CD2327    INCMD	CALL	GTDRV		;GET THE DRIVE
+ 22C7 CD5027    	CALL	L2750		;MAKE SURE IT'S END OF COMMAND
+ 22CA 210020    	LXI	H,2000H		;20=INITLZATION CHAR; 00=INCREMENT
+ 22CD 22C027    	SHLD	LNBUF		;SAVE THEM
+ 22D0 0600      L22D0	MVI	B,0		;0=WRITE COMMAND
+ 22D2 3AEE28    L22D2	LDA	L28EE		;GET THE DRIVE
+ 22D5 4F        	MOV	C,A		;MOVE IT TO REG C
+ 22D6 3E23      	MVI	A,35		;NO OF TRACKS ON DISK
+ 22D8 210000    	LXI	H,0		;STARTING DISK ADDRESS
+ 22DB F5        L22DB	PUSH	PSW		;SAVE NO TRACKS LEFT TO DO
+ 22DC C5        	PUSH	B		;SAVE COMMAND & UNIT
+ 22DD E5        	PUSH	H		;SAVE STARTING DISK ADDRESS
+ 22DE 2AC027    	LHLD	LNBUF		;GET INIT CHAR & INCREMENT
+ 22E1 7C        	MOV	A,H		;INITIALIZATION CHAR TO ACC.
+ 22E2 110034    	LXI	D,DOS+1400H	;TOP OF RAM SCRATCH AREA
+ 22E5 01000A    	LXI	B,0A00H		;LENGTH OF RAM SCRACTH AREA
+ 22E8 1B        L22E8	DCX	D		;DCR POINTER
+ 22E9 12        	STAX	D		;MOVE INIT CHAR TO DE POINTER
+ 22EA 0D        	DCR	C		;DCR NO OF CHAR LEFT IN BLOCK
+ 22EB C2E822    	JNZ	L22E8		;CONTINUE IF NOT DONE WITH BLOCK
+ 22EE 85        	ADD	L		;DONE W BLOCK; INR INIT CHAR.
+ 22EF 67        	MOV	H,A		;SAVE NEW INIT CHAR
+ 22F0 05        	DCR	B		;DCR NO OF BLOCKS LEFT TO DO
+ 22F1 C2E822    	JNZ	L22E8		;DO NEXT BLOCK UNLESS DONE
+ 22F4 22C027    	SHLD	LNBUF		;SAVE INIT CHAR & INCREMENT
+ 22F7 E1        	POP	H		;GET DISK ADDRESS
+ 22F8 C1        	POP	B		;GET UNIT & COMMAND
+ 22F9 C5        	PUSH	B		;PUT THEM BACK
+ 22FA E5        	PUSH	H		;SAVE DISK ADDRESS
+ 22FB 3E0A      	MVI	A,10		;10 BLOCKS/TRACK & IN CORE
+ 22FD CD5F24    	CALL	DCOMD		;WRITE THEM OUT
+ 2300 DAAC20    	JC	WHAT		;ON ERROR
+ 2303 CD1620    	CALL	CONTC		;CHECK FOR ABORT
+ 2306 CAAC20    	JZ	WHAT		;FOUND--ABORT IT
+ 2309 E1        	POP	H		;GET DISK ADDRESS
+ 230A 010A00    	LXI	B,000AH		;WE JUST DID 10 BLOCKS
+ 230D 09        	DAD	B		;INR DISK ADDRESS
+ 230E C1        	POP	B		;RESTORE COMMAND & UNIT
+ 230F F1        	POP	PSW		;RESTORE NO OF LEFT TO DO
+ 2310 3D        	DCR	A		;DCR NO OF TRACKS LEFT TO DO
+ 2311 C2DB22    	JNZ	L22DB		;DO NEXT TRACK IF NOT DONE
+ 2314 C9        	RET			;DONE
+                ;**********************************************************
+                ;****  DT (DISKETTE TEST) COMMAND.                     ****
+                ;**********************************************************
+ 2315 CD2327    DTCMD	CALL	GTDRV
+ 2318 CD5027    	CALL	L2750
+ 231B 210100    	LXI	H,1
+ 231E 22C027    	SHLD	LNBUF
+ 2321 CDD022    L2321	CALL	L22D0
+ 2324 21C127    	LXI	H,LNBUF+1
+ 2327 7E        	MOV	A,M
+ 2328 D65E      	SUI	5EH
+ 232A 77        	MOV	M,A
+ 232B 0602      	MVI	B,2
+ 232D CDD222    	CALL	L22D2
+ 2330 C32123    	JMP	L2321
+                ;**********************************************************
+                ;****  CD (COPY DISKETTE) COMMAND.                     ****
+                ;**********************************************************
+ 2333 CD2327    CDCMD	CALL	GTDRV
+ 2336 32C027    	STA	LNBUF
+ 2339 CD4027    	CALL	FTCHR
+ 233C FE20      	CPI	' '
+ 233E C2AC20    	JNZ	WHAT
+ 2341 CD2327    	CALL	GTDRV
+ 2344 CD5027    	CALL	L2750
+ 2347 015E01    	LXI	B,015EH
+ 234A 210000    	LXI	H,0
+ 234D 54        	MOV	D,H
+ 234E 5D        	MOV	E,L
+ 234F 22C127    L234F	SHLD	LNBUF+1
+ 2352 EB        	XCHG
+ 2353 22C327    	SHLD	LNBUF+3
+ 2356 21F6FF    	LXI	H,0FFF6H
+ 2359 09        	DAD	B
+ 235A D27323    	JNC	L2373
+ 235D E5        	PUSH	H
+ 235E 3E0A      	MVI	A,0AH
+ 2360 CD7623    	CALL	L2376
+ 2363 010A00    	LXI	B,000AH
+ 2366 2AC327    	LHLD	LNBUF+3
+ 2369 09        	DAD	B
+ 236A EB        	XCHG
+ 236B 2AC127    	LHLD	LNBUF+1
+ 236E 09        	DAD	B
+ 236F C1        	POP	B
+ 2370 C34F23    	JMP	L234F
+ 2373 79        L2373	MOV	A,C
+ 2374 B7        	ORA	A
+ 2375 C8        	RZ	
+ 2376 F5        L2376	PUSH	PSW
+ 2377 2AC027    	LHLD	LNBUF
+ 237A 4D        	MOV	C,L
+ 237B 2AC327    	LHLD	LNBUF+3
+ 237E 11002A    	LXI	D,DOS+0A00H
+ 2381 D5        	PUSH	D
+ 2382 0601      	MVI	B,1
+ 2384 CD5F24    	CALL	DCOMD
+ 2387 2AC127    	LHLD	LNBUF+1
+ 238A D1        	POP	D
+ 238B 3AEE28    	LDA	L28EE
+ 238E 4F        	MOV	C,A
+ 238F 0600      	MVI	B,0
+ 2391 F1        	POP	PSW
+ 2392 CD5F24    	CALL	DCOMD
+ 2395 DAAC20    	JC	WHAT
+ 2398 C9        	RET
+                ;**********************************************************
+                ;****  THIS ROUTINE DOES DIRECTORY LOOKUPS.  ON ENTRY  ****
+                ;****  H,L POINT TO NAME TO BE LOOKED UP, A HAS DRIVE. ****
+                ;**********************************************************
+ 2399 22F628    L2399	SHLD	CLPTR		;STORE POINTER TO NAME TO LOOK UP
+ 239C 32EE28    	STA	L28EE		;STORE REQUESTED DRIVE
+ 239F 7E        	MOV	A,M		;GET 1ST CHAR OF NAME TO LOOK UP
+ 23A0 FE20      	CPI	' '		;LOOKING FOR AN EMPTY ENTRY ?
+ 23A2 C2AB23    	JNZ	L23AB		;NO--LOAD BUFFER,DO LOOKUP
+ 23A5 CD0124    	CALL	L2401		;YES--BLANK BUFFER
+ 23A8 C3AE23    	JMP	L23AE		;DO LOOKUP
+ 23AB CDC023    L23AB	CALL	L23C0		;LOAD BUFFER FROM INPUT LINE
+ 23AE C30C25    L23AE	JMP	L250C		;DO DE/CR TYPE LOOKUP
+                ;**********************************************************
+                ;****  BLANK OUT FILE-NAME BUFFER, GET FILE NAME,      ****
+                ;****  DRIVE, DO DIRECTORY LOOKUP.                     ****
+                ;**********************************************************
+ 23B1 CDBB23    L23B1	CALL	L23BB		;GET DRIVE, FILE NAME
+ 23B4 CD0C25    	CALL	L250C		;DO LOOKUP
+ 23B7 DAAC20    	JC	WHAT		;IF ERROR DETECTED
+ 23BA C9        	RET
+ 23BB 3E01      L23BB	MVI	A,1		;DRIVE #1 = DEFAULT
+ 23BD 32EE28    	STA	L28EE		;STORE IT AS SELECTED DRIVE
+ 23C0 CD0124    L23C0	CALL	L2401		;BLANK OUT BUFFER & POINT TO START
+ 23C3 E5        	PUSH	H		;SAVE PTR TO FILE NAME BUFFER
+ 23C4 CD4027    L23C4	CALL	FTCHR		;GET CHAR FROM INPUT LINE
+ 23C7 CABF24    	JZ	L24BF		;STC & RETURN IF 1ST CHAR = CR
+ 23CA FE20      	CPI	' '		;1ST CHAR = SPACE ?
+ 23CC CAC423    	JZ	L23C4		;YES--GET NEXT CHAR
+ 23CF FE2C      	CPI	','		;1ST CHAR = ',' ?
+ 23D1 CABF24    	JZ	L24BF		;STC & RET; , NOT ALLOWED HERE
+ 23D4 0608      	MVI	B,8		;GOT LIVE CHAR--SET NAME LENGTH
+ 23D6 CAFF23    L23D6	JZ	L23FF		;CHAR WAS C/R; DONE WITH NAME
+ 23D9 FE20      	CPI	' '		;WAS CHAR SPACE ?
+ 23DB CAFF23    	JZ	L23FF		;YES--DONE WITH NAME
+ 23DE FE2C      	CPI	','		;WAS CHAR ',' ?
+ 23E0 CAEF23    	JZ	L23EF		;YES--GET SPECIFIED DRIVE
+ 23E3 05        	DCR	B		;NORM CHAR; DCR COUNT OF CHR LEFT
+ 23E4 FABF24    	JM	L24BF		;JMP IF DONE WITH 8 CHAR NAME
+ 23E7 77        	MOV	M,A		;STORE CHAR IN BUFFER
+ 23E8 23        	INX	H		;INR NAME BUFFER POINTER
+ 23E9 CD4027    	CALL	FTCHR		;GET THE NEXT CHAR
+ 23EC C3D623    	JMP	L23D6		;PROCESS IT
+ 23EF CD2327    L23EF	CALL	GTDRV		;GET THE SPECIFIED DRIVE
+ 23F2 CD4027    	CALL	FTCHR		;GET THE NEXT CHAR
+ 23F5 FE20      	CPI	' '		;SPACE ?
+ 23F7 CAFF23    	JZ	L23FF		;YES--DONE
+ 23FA FE0D      	CPI	0DH		;NO--C/R ?
+ 23FC C2BF24    	JNZ	L24BF		;NO--INVALID CHAR TYPED; STC & RET
+ 23FF D1        L23FF	POP	D		;RESTORE PTR TO FILENAME BUF TO D
+ 2400 C9        	RET
+                ;**********************************************************
+                ;****  THIS ROUTINE BLANKS OUT A FILE NAME BUFFER AT   ****
+                ;****  28E6H TO 28EDH USED TO HOLD FILE NAMES.         ****
+                ;**********************************************************
+ 2401 21EE28    L2401	LXI	H,DOS+8EEH	;LOAD 1 PAST END OF BUFFER
+ 2404 0608      L2404	MVI	B,8		;SET BUFFER LENGTH
+ 2406 2B        L2406	DCX	H		;DCR BUFFER POINTER
+ 2407 3620      	MVI	M,' '		;PUT SPACE IN BUFFER
+ 2409 05        	DCR	B		;DCR COUNT OF CHAR LEFT
+ 240A C20624    	JNZ	L2406		;IF NOT DONE
+ 240D C9        	RET
+                ;**********************************************************
+                ;****  THIS ROUTINE WRITES AN UPDATED DIRECTORY BLOCK  ****
+                ;****  BACK TO THE DISK.                               ****
+                ;**********************************************************
+ 240E 3AEE28    L240E	LDA	L28EE		;GET DRIVE
+ 2411 4F        	MOV	C,A		;TO REG C
+ 2412 3AF028    	LDA	L28F0		;LOW ORDER DISK ADDRESS
+ 2415 6F        	MOV	L,A		;TO REG L
+ 2416 2600      	MVI	H,0		;HIGH ORDER DISK ADDR
+ 2418 0600      	MVI	B,0		;0=WRITE COMMAND
+ 241A 11E027    	LXI	D,AREA		;CORE ADDR OF BLK TO BE WRITTEN
+ 241D 3E01      	MVI	A,1		;JUST 1 BLOCK
+ 241F CD5F24    	CALL	DCOMD		;DO IT
+ 2422 DAAC20    	JC	WHAT		;IF ERROR
+ 2425 C9        	RET
+                ;**********************************************************
+ 2426 7B        L2426	MOV	A,E
+ 2427 B7        	ORA	A
+ 2428 C25A24    	JNZ	L245A
+ 242B 3A2B20    	LDA	RWCHK
+ 242E B7        	ORA	A
+ 242F CA5A24    	JZ	L245A
+ 2432 E1        	POP	H
+ 2433 F1        	POP	PSW
+ 2434 3ABE27    	LDA	L27BE
+ 2437 1E02      	MVI	E,2
+ 2439 32BE27    L2439	STA	L27BE
+ 243C 3E0A      	MVI	A,0AH
+ 243E F5        L243E	PUSH	PSW
+ 243F E5        	PUSH	H
+ 2440 D5        	PUSH	D
+ 2441 C5        	PUSH	B
+ 2442 3ABE27    	LDA	L27BE
+ 2445 CD1EE9    	CALL	LE91E
+ 2448 78        	MOV	A,B
+ 2449 32BF27    	STA	L27BF
+ 244C C1        	POP	B
+ 244D D1        	POP	D
+ 244E CA2624    	JZ	L2426
+ 2451 E1        	POP	H
+ 2452 F1        	POP	PSW
+ 2453 3D        	DCR	A
+ 2454 C23E24    	JNZ	L243E
+ 2457 C31920    	JMP	HDERR
+ 245A D1        L245A	POP	D
+ 245B D1        	POP	D
+ 245C C3CEE9    	JMP	LE9CE
+                ;NSDOS2 3000 9073 2770 11/06/77
+                ;**********************************************************
+                ;****  DISK COMMAND ROUTINE.  ACC = NO. BLOCKS;        ****
+                ;****  B = COMMAND (0=WRITE, 1=READ, 2=VRFY), C = UNIT ****
+                ;****  DE = STARTING RAM ADDR., HL = DISK ADDR.        ****
+                ;****  RETURN WITH CARRY SET IF ARGS ARE ILLEGAL.      ****
+                ;**********************************************************
+ 245F D5        DCOMD	PUSH	D		;SAVE REGISTERS
+ 2460 C5        	PUSH	B
+ 2461 F5        	PUSH	PSW
+ 2462 E5        	PUSH	H
+ 2463 B7        	ORA	A		;NO BLOCKS = 0 ?
+ 2464 CABC24    	JZ	L24BC		;YES - ERROR
+ 2467 11A2FE    	LXI	D,-350D		;NO - CHECK VALU OF DISK ADDR.
+ 246A 19        	DAD	D		;ADD REQ. STARTING DISK ADDR
+ 246B DABC24    	JC	L24BC		;IF START ADDR > 349
+ 246E 5F        	MOV	E,A		;NO BLOCKS TO E
+ 246F 1600      	MVI	D,0
+ 2471 1B        	DCX	D
+ 2472 19        	DAD	D		;ADD NO BLOCKS TO START ADDR
+ 2473 DABC24    	JC	L24BC		;IF RESULT > 349
+ 2476 79        	MOV	A,C		;UNIT NO.
+ 2477 FE01      	CPI	1		;MUST BE 1,2 OR 3 -- NOT 0
+ 2479 DABC24    	JC	L24BC		;IF ERROR
+ 247C FE04      	CPI	4		;MUST NOT BE > 3
+ 247E D2BC24    	JNC	L24BC		;IF ERROR
+ 2481 78        	MOV	A,B		;COMMAND
+ 2482 FE01      	CPI	1		;READ ?
+ 2484 CAC224    	JZ	L24C2		;YES - GO TO READ ROUTINE
+ 2487 FE02      	CPI	2		;VERIFY ?
+ 2489 CAC224    	JZ	L24C2		;YES-GO TO VERYIFY/READ ROUTINE
+ 248C FE00      	CPI	0		;WRITE ?
+ 248E C2BC24    	JNZ	L24BC		;NO - ERROR IF NOT 0,1 OR 2
+ 2491 3A90EB    	LDA	LEB90		;LOAD A STAT & START MOTOR
+ 2494 E610      	ANI	10H		;MOTOR ON ?
+ 2496 C2A124    	JNZ	L24A1		;YES - JUMP
+ 2499 1632      	MVI	D,50		;NO-SET UP 50 SECTOR HOLE DELAY
+ 249B CDD0E9    	CALL	LE9D0		;WAIT
+ 249E C3A824    	JMP	L24A8
+ 24A1 3A0320    L24A1	LDA	DRSEL		;FIND OUT WHICH DRIVE SEL.
+ 24A4 B9        	CMP	C		;THE ONE WE WANT ?
+ 24A5 CAB424    	JZ	L24B4		;YES
+ 24A8 06EB      L24A8	MVI	B,BRD+3		;SET UP HD. LOAD & DRIVE
+ 24AA 0A        	LDAX	B		;LOAD HEAD & SELECT
+ 24AB 79        	MOV	A,C		;GET SELECTED DRIVE
+ 24AC 320320    	STA	DRSEL		;STASH SELECTED DRIVE
+ 24AF 160D      	MVI	D,13		;SET UP DELAY FOR SETTLE TIME
+ 24B1 CDD0E9    	CALL	LE9D0		;WAIT
+ 24B4 3A10EB    L24B4	LDA	LEB10		;LOAD A STAT REG
+ 24B7 E602      	ANI	2		;WRITE PROTECT ?
+ 24B9 CAC224    	JZ	L24C2		;JUMP IF NOT
+ 24BC E1        L24BC	POP	H		;ELSE ERROR RETURN
+ 24BD F1        	POP	PSW
+ 24BE C1        	POP	B
+ 24BF D1        L24BF	POP	D
+ 24C0 37        	STC
+ 24C1 C9        	RET
+ 24C2 E1        L24C2	POP	H		;GET DISK ADDR BACK
+ 24C3 F1        	POP	PSW		;GET NO BLOCKS BACK
+ 24C4 11F6FF    	LXI	D,-10
+ 24C7 06FF      	MVI	B,0FFH		;0FFH = -1
+ 24C9 04        L24C9	INR	B		;KEEP A COUNT OF "ADDITIONS"
+ 24CA 19        	DAD	D		;SUBTRACT 10 FROM DISK ADDR
+ 24CB DAC924    	JC	L24C9		;DO IT AGAIN IF ANS > 0
+ 24CE 85        L24CE	ADD	L		;GET STARTING SECTOR (?)
+                ;**********************************************************
+                ;****  NOTE THAT THE FOLLOWING INST WAS ORIGINALLY A   ****
+                ;****  JM (FA) RATHER THAN A JNC (D2).  THIS PREVENTED ****
+                ;****  THE DOS FROM WORKING WITH FILES > 134 BLOCKS.   ****
+                ;**********************************************************
+ 24CF D2FE24    	JNC	L24FE
+ 24D2 CAFE24    	JZ	L24FE
+ 24D5 67        	MOV	H,A
+ 24D6 7D        	MOV	A,L
+ 24D7 C60A      	ADI	10
+ 24D9 57        	MOV	D,A
+ 24DA D60B      	SUI	0BH
+ 24DC 2F        	CMA
+ 24DD 32BF27    	STA	L27BF
+ 24E0 68        	MOV	L,B
+ 24E1 22E028    	SHLD	L28E0
+ 24E4 E1        	POP	H
+ 24E5 22E228    	SHLD	L28E2
+ 24E8 4D        	MOV	C,L
+ 24E9 5C        	MOV	E,H
+ 24EA E1        	POP	H
+ 24EB CD3924    	CALL	L2439
+ 24EE E5        	PUSH	H
+ 24EF 2AE228    	LHLD	L28E2
+ 24F2 E5        	PUSH	H
+ 24F3 2AE028    	LHLD	L28E0
+ 24F6 7C        	MOV	A,H
+ 24F7 45        	MOV	B,L
+ 24F8 04        	INR	B
+ 24F9 2EF6      	MVI	L,0F6H
+ 24FB C3CE24    	JMP	L24CE
+ 24FE 95        L24FE	SUB	L
+ 24FF F5        	PUSH	PSW
+ 2500 7D        	MOV	A,L
+ 2501 C60A      	ADI	10
+ 2503 57        	MOV	D,A
+ 2504 F1        	POP	PSW
+ 2505 E1        	POP	H
+ 2506 5C        	MOV	E,H
+ 2507 4D        	MOV	C,L
+ 2508 E1        	POP	H
+ 2509 C33924    	JMP	L2439
+                ;**********************************************************
+                ;****  THE ROUTINES FROM 250C TO 2625 ARE USED TO READ ****
+                ;****  THE DIRECTORY AND USE IT FOR THE DIRECTORY LIST,****
+                ;****  COMPRESS AND CREATE COMMANDS. LOOK UP NAMES,    ****
+                ;****  GET 1ST FREE BLOCK, 1ST FILE NEEDING COMPR, ETC.****
+                ;**********************************************************
+ 250C AF        L250C	XRA	A		;ENTRY PT. FOR CR,DE COMMAND
+ 250D 32EF28    L250D	STA	L28EF		;SAVE COMD; 0=CR,DE, 1=LI, 2=CO
+ 2510 32F128    	STA	L28F1		;"NEED COMRESSION" FLAG
+ 2513 22F228    	SHLD	L28F2		;1ST "UNCOMPRESSED" FILE BLOCK
+ 2516 215F01    	LXI	H,351		;NO OF DISK BLOCKS + 1
+ 2519 22F428    	SHLD	L28F4		;D.A. OF LOWEST UNCOMPRESSED FILE
+ 251C 210400    	LXI	H,4		;LOWEST AVAIL BLK FOR NEW FILE
+ 251F 22E428    	SHLD	L28E4		;1ST FREE BLOCK
+ 2522 010004    	LXI	B,0400H		;NO DIR BLKS, NO CHECKED
+ 2525 EB        L2525	XCHG
+ 2526 E5        	PUSH	H		;H POINTS TO NAME TO BE LOOKED UP
+ 2527 C5        	PUSH	B		;NO DIR BLKS, NO CHECKED SO FAR
+ 2528 CD3B25    	CALL	L253B		;TO GET DIR BLK & PROCESS IT
+ 252B C1        	POP	B		;RESTORE REGESTER
+ 252C D1        	POP	D		;RESTORE REG-PUSHED AS H AFTR XCHG
+ 252D 3AEE28    	LDA	L28EE		;GET REQUESTED DRIVE BACK IN A
+ 2530 C8        	RZ			;SET BY PROCESSING ROUTINE IF DONE
+ 2531 0C        	INR	C		;INR DISK ADDR TO BE CHECKED NEXT
+ 2532 05        	DCR	B		;DCR COUNT OF REMAINING DIR BLOCKS
+ 2533 C22525    	JNZ	L2525		;DO NEXT DIRECTORY BLOCK
+ 2536 37        	STC			;ALL BLKS CHECKED & NO MATCH FOUND
+ 2537 2AE428    	LHLD	L28E4		;GET 1ST FREE BLOCK IN H,L
+ 253A C9        	RET			;TO CALLER
+ 253B E5        L253B	PUSH	H		;SAVE REG-DIR BLKS CKD, CUR BLOCK
+ 253C 2600      	MVI	H,0		;HIGH ORDER DISK ADDRESS
+ 253E 69        	MOV	L,C		;LOW ORDER--DIR BLK TO BE CHECKED
+ 253F 11E027    	LXI	D,AREA		;READ WILL STORE DATA BEG AT AREA
+ 2542 79        	MOV	A,C		;DIRECTORY BLOCK TO BE READ
+ 2543 32F028    	STA	L28F0		;SAVE IT
+ 2546 3AEE28    	LDA	L28EE		;GET THE REQUESTED DRIVE
+ 2549 4F        	MOV	C,A		;MOVE IT TO REG C
+ 254A 0601      	MVI	B,1		;WE'RE GOING TO READ
+ 254C 3E01      	MVI	A,1		;1 BLOCK
+ 254E CD5F24    	CALL	DCOMD		;DO READ
+ 2551 21E027    	LXI	H,AREA		;POINT TO DOS RAM AREA
+ 2554 0610      	MVI	B,16		;NO OF DIRECTRY ENTRIES PER BLOCK
+ 2556 D1        	POP	D		;PUSHED AS H; PTR TO NAME TO CHECK
+ 2557 D5        L2557	PUSH	D		;PUT IT BACK
+ 2558 E5        	PUSH	H		;SAVE PTR TO DIR ENTRY IN DOS RAM
+ 2559 0E08      	MVI	C,8		;FILE NAME IS 8 CHAR
+ 255B 3AEF28    	LDA	L28EF		;GET THE COMMAND
+ 255E B7        	ORA	A		;SET THE FLAG
+ 255F C2A225    	JNZ	L25A2		;IF IT'S NOT CREATE FILE, JMP
+                ;**********************************************************
+                ;****  THIS ROUTINE COMPARES A NAME POINTED TO BY D,E  ****
+                ;****  AGAINST NAMES IN DOS RAM TO SEE IF NAME ALREADY ****
+                ;****  EXISTS.  H,L POINT TO DIRECTORY ENTRY IN RAM.   ****
+                ;****  ALSO FINDS 1ST FREE ADDR FOR ADDING NEW FILES.  ****
+                ;**********************************************************
+ 2562 1A        L2562	LDAX	D		;POINT TO NAME TO BE MATCHED
+ 2563 BE        	CMP	M		;SAME AS 1ST CHAR OF DIR ENTRY ?
+ 2564 C27125    	JNZ	L2571		;NO-MATCH FAIL OR EMPTY DIR ENTRY
+ 2567 13        	INX	D		;MATCH--INR POINTER TO NAME
+ 2568 23        	INX	H		;INR POINTER INTO DIRECT. ENTRY
+ 2569 0D        	DCR	C		;DCR COUNT OF CHAR LEFT TO CHECK
+ 256A C26225    	JNZ	L2562		;CHECK NEXT CHAR UNLESS DONE
+ 256D C1        L256D	POP	B		;RESTORE REGISTERS
+ 256E C1        	POP	B		;RESTORE REGISTERS
+ 256F AF        	XRA	A		;CLEAR ACCUM. & FLAGS
+ 2570 C9        	RET			;RET TO CALLER IND. MATCH FOUND
+ 2571 E1        L2571	POP	H		;GET POINTER INTO RAM DIR ENTRY
+ 2572 E5        	PUSH	H		;PUT IT BACK
+ 2573 7E        	MOV	A,M		;GET 1ST CHAR OF FILE NAME
+ 2574 FE20      	CPI	' '		;BLANK (E.G. ENTRY EMPTY) ?
+ 2576 CA9525    	JZ	L2595		;YES--CHECK NEXT DIRECTORY ENTRY
+ 2579 C5        	PUSH	B		;NO--TRUE MISMATCH; SAVE B REG
+ 257A 110800    	LXI	D,8		;LOAD D WITH NAME LENGTH
+ 257D 19        	DAD	D		;POINT TO FILE STARTING DSK ADDR
+ 257E CD1E27    	CALL	LDDEM		;GET IT TO D,E
+ 2581 4E        	MOV	C,M		;MOVING FILE DISK LENGTH TO B,C
+ 2582 23        	INX	H		;2ND BYTE
+ 2583 46        	MOV	B,M		;FILE DISK LENGTH IN B,C
+ 2584 EB        	XCHG			;MOVE FILE START DISK ADDR TO H,L
+ 2585 09        	DAD	B		;ADD DSK LNGTH TO DISK START ADDR
+ 2586 EB        	XCHG			;MOVE RESULT TO D,E
+ 2587 21E428    	LXI	H,DOS+8E4H	;GET CURRENT 1ST FREE BLOCK
+ 258A CD5727    	CALL	COMPR		;COMPARE IT TO END OF THIS FILE
+ 258D C1        	POP	B		;RESTORE REGISTER
+ 258E DA9525    	JC	L2595		;IF CUR 1ST FREE>END OF THIS FILE
+ 2591 EB        	XCHG			;PUT END OF THIS FILE + 1 IN H,L
+ 2592 22E428    	SHLD	L28E4		;UPDATE 1ST FREE BLOCK
+                ;**********************************************************
+                ;****  RESTORES HL TO POINT TO BEG OF CUR DIR ENTRY,   ****
+                ;****  INR'S IT BY ENTRY LENGTH & JUMPS TO CHK NEXT    ****
+                ;****  ENTRY UNLESS NO ENTRIES LEFT THIS BLOCK; IN     ****
+                ;****  WHICH CASE CLEAR FLAGS, SET ACC=1 & RETURN.     ****
+                ;**********************************************************
+ 2595 E1        L2595	POP	H		;GET PNTR TO BEG OF CUR DIR ENTRY
+ 2596 111000    	LXI	D,16		;LENGTH OF DIRECTORY ENTRY
+ 2599 19        	DAD	D		;ADD IT TO START OF CUR ENTRY
+ 259A D1        	POP	D		;POINTER TO NAME TO MATCH
+ 259B 05        	DCR	B		;MORE ENTRIES TO CHK THIS BLOCK?
+ 259C C25725    	JNZ	L2557		;YES--SET UP TO CHECK THEM
+ 259F AF        	XRA	A		;NO-ZERO ACC & CLEAR FLAGS
+ 25A0 3C        	INR	A		;PUT 1 IN ACC
+ 25A1 C9        	RET			;RET-TO GET NEXT BLK OR DONE
+                ;**********************************************************
+                ;****  THIS ROUTINE PRINTS A ONE LINE LISTING OF THE   ****
+                ;****  DIRECTORY ENTRY IN DOS RAM POINTED TO BY H,L.   ****
+                ;****  REG B,C IS PRESERVED & STACK TOP CONTAINS RAM   ****
+                ;****  POINTER AT ENTRY ON RETURN.                     ****
+                ;**********************************************************
+ 25A2 FE02      L25A2	CPI	2		;IS IT 2 (COMPRESS) ?
+ 25A4 7E        	MOV	A,M		;GET CHAR FROM DIRECTY COPY IN RAM
+ 25A5 CAF825    	JZ	L25F8		;IF COMPRESS JMP
+ 25A8 FE20      	CPI	' '		;IS DIRECTORY ENTRY EMPTY?
+ 25AA CA9525    	JZ	L2595		;YES--TRY NEXT DIRECTORY ENTRY
+ 25AD C5        	PUSH	B		;NO-SAVE ENTRIES LEFT & ENTRY LEN
+ 25AE 46        L25AE	MOV	B,M		;GET CHAR OF FILE NAME
+ 25AF CD0B27    	CALL	PRINT		;PRINT IT
+ 25B2 23        	INX	H		;POINT TO NEXT CHAR
+ 25B3 0D        	DCR	C		;DCR NO OF CHAR LEFT TO PRINT
+ 25B4 C2AE25    	JNZ	L25AE		;IF MORE CHAR LEFT, DO NEXT ONE
+ 25B7 CD0927    	CALL	PSPAC		;SPACE AFTER NAME
+ 25BA CD1E27    	CALL	LDDEM		;GET DISK ADDR IN D,E
+ 25BD E5        	PUSH	H		;SAVE POINTER
+ 25BE EB        	XCHG			;DISK ADDR TO H,L
+ 25BF CDD726    	CALL	THDDP		;CALL 3 DIGT DEC PRINT-DSK ADDR
+ 25C2 CD0927    	CALL	PSPAC		;SPACE BETWEEN DSK ADDR & LENGTH
+ 25C5 E1        	POP	H		;GET POINTER BACK
+ 25C6 CD1E27    	CALL	LDDEM		;GET LENGTH IN D,E
+ 25C9 E5        	PUSH	H		;SAVE POINTER
+ 25CA EB        	XCHG			;LENGTH TO H,L
+ 25CB CDD726    	CALL	THDDP		;PRINT LENGTH
+ 25CE CD0927    	CALL	PSPAC		;SPACE AFTER LENGTH
+ 25D1 E1        	POP	H		;GET BACK POINTER
+ 25D2 E5        	PUSH	H		;SAVE POINTER
+ 25D3 6E        	MOV	L,M		;GET TYPE BYTE
+ 25D4 2600      	MVI	H,0		;SINCE TYPE<256
+ 25D6 CDD726    	CALL	THDDP		;PRINT TYPE
+ 25D9 E1        	POP	H		;GET POINTER
+ 25DA 7E        	MOV	A,M		;GET TYPE AGAIN
+ 25DB FE01      	CPI	1		;TYPE 1 FILE ?
+ 25DD C2EB25    	JNZ	L25EB		;NO--DON'T PRINT GO ADDR
+ 25E0 CD0927    	CALL	PSPAC		;YES--SPACE AFTER TYPE
+ 25E3 23        	INX	H		;POINT TO GO ADDR
+ 25E4 CD1E27    	CALL	LDDEM		;GET GO ADDR IN D,E
+ 25E7 EB        	XCHG			;MOVE IT TO H,L
+ 25E8 CDC326    	CALL	HEXPT		;PRINT 4 DIGIT HEX ADDR
+ 25EB CD0F27    L25EB	CALL	CRLF		;CRLF AFTER ENTRY
+ 25EE CD1620    	CALL	CONTC		;CHECK FOR ABORT
+ 25F1 CAAC20    	JZ	WHAT		;ABORT THE DIRECTORY LIST
+ 25F4 C1        	POP	B		;GET BACK ENTRIES/BLK & ENTRY LEN
+ 25F5 C39525    	JMP	L2595		;TO SET UP FOR NEXT ENTRY
+                ;**********************************************************
+                ;****  THIS ROUTINE FINDS NEXT FILE TO BE "MOVED UP".  ****
+                ;****  28F2 HAS 1ST "FREE" DISK ADDR (4 TO START WITH) ****
+                ;****  COMPARE EACH FILE'S START ADDR TO IT; IF START  ****
+                ;****  ADR IS LOWER, FILE IS ALREADY COMPR.  IF EQUAL, ****
+                ;****  FILE IS COMPR, BUT NEED TO RETURN TO FIND NEW   ****
+                ;****  "1ST FREE" ADDR; IF GREATER, COMPARE FILE'S     ****
+                ;****  START ADDR WITH PREVIOUSLY SAVED LOWEST START   ****
+                ;****  ADDRESS OF FILE NEEDING COMPR & SAVE LOWER OF   ****
+                ;****  TWO, SETTING FLAG AT 28F1 SO MAIN ROUTINE KNOWS ****
+                ;****  THAT A COMPRESSION RUN IS NEEDED AFTER ENTIRE   ****
+                ;****  DIRECTORY IS PROCESSED.  CHK EVERY FILE ON DISK.****
+                ;**********************************************************
+ 25F8 FE20      L25F8	CPI	' '		;IS ENTRY BLANK ?
+ 25FA CA9525    	JZ	L2595		;YES--GO TO NEXT ENTRY
+ 25FD 110800    	LXI	D,8		;PUT NAME LENGTH IN D,E
+ 2600 19        	DAD	D		;POINT TO START DISK ADDR
+ 2601 EB        	XCHG			;MOVE POINTER TO START D.A. TO DE
+ 2602 2AF228    	LHLD	L28F2		;GET END ADDR OF LAST COMPR FILE
+ 2605 EB        	XCHG			;MOVE IT TO D,E POINTER TO H,L
+ 2606 CD5727    	CALL	COMPR		;CUR FILE BEG AT END OF LAST FILE?
+ 2609 CA6D25    	JZ	L256D		;YES-RETN & UPDATE 1ST AVAIL BLOCK
+ 260C D29525    	JNC	L2595		;NO-CUR FILE IS COMPR-GO TO NEXT
+ 260F EB        	XCHG			;CUR FILE NEEDS COMPR-PTR TO D,E
+ 2610 2AF428    	LHLD	L28F4		;GET CUR LOWEST FILE NEEDING COMPR
+ 2613 EB        	XCHG			;SET UP FOR TEST
+ 2614 CD5727    	CALL	COMPR		;COMPARE START ADDR OF TWO FILES
+ 2617 DA9525    	JC	L2595		;ALREADY HAVE FILE W/LOWER ADDR
+ 261A CD1E27    	CALL	LDDEM		;THIS ONE LOWER--START ADDR TO D,E
+ 261D EB        	XCHG			;TO H,L
+ 261E 22F428    	SHLD	L28F4		;MAKE IT THE NEW "LOWEST" DISK ADR
+ 2621 AF        	XRA	A		;CLEAR ACC & FLAGS
+ 2622 32F128    	STA	L28F1		;0 TELLS CALLER WE NEED A COMPRSN
+ 2625 C39525    	JMP	L2595		;CHECK OUT NEXT FILE IN DIR BLOCK
+                ;**********************************************************
+                ;****  THIS IS THE KEYBOARD LINE INPUT ROUTINE.        ****
+                ;**********************************************************
+ 2628 21C227    GETLN	LXI	H,LNBUF+2	;ADDR OF 1ST CHAR AFTER COMMAND
+ 262B 22F628    	SHLD	CLPTR		;STORE IT
+ 262E 2B        	DCX	H		;BACK UP TO BEG OF BUFFER
+ 262F 2B        	DCX	H
+ 2630 110120    	LXI	D,2001H		;E=CHAR COUNT+1; D=MAX NO OF CHAR
+ 2633 AF        L2633	XRA	A
+ 2634 CD1020    	CALL	CIN		;GET CHAR
+ 2637 47        	MOV	B,A
+ 2638 CD0B27    	CALL	PRINT		;ECHO IT
+ 263B FE40      	CPI	'@'		;LINE DELETE CHAR ?
+ 263D CAB120    	JZ	CRLFR		;YES--CRLF & RESTART
+ 2640 FE5F      	CPI	5FH		;NO-CHAR DELETE CHAR ?
+ 2642 C24E26    	JNZ	L264E		;NO-PROCESS NORMAL CHAR
+ 2645 14        	INR	D		;YES-INR NO OF ADDL CHAR ALLOWED
+ 2646 1D        	DCR	E		;DCR CHAR COUNT
+ 2647 CAB120    	JZ	CRLFR		;CRLF & RESET IF CHAR COUNT = 0
+ 264A 2B        	DCX	H		;DCR INPUT LINE BUFFER POINTER
+ 264B C33326    	JMP	L2633		;GET NEXT CHAR
+ 264E 77        L264E	MOV	M,A		;PUT CHAR IN BUFFER
+ 264F FE0D      	CPI	0DH		;CARR RETURN ?
+ 2651 060A      	MVI	B,0AH		;SET UP LINE FEED
+ 2653 CA0B27    	JZ	PRINT		;PRINT IF CR (CR WAS ECHOED)
+ 2656 23        	INX	H		;NOT CR--INR BUFFER POINTER
+ 2657 1C        	INR	E		;INR CHAR COUNT
+ 2658 15        	DCR	D		;DCR REMAINING BUFFER AVAIL
+ 2659 C23326    	JNZ	L2633		;NEXT CHAR IF BUFFER NOT FULL
+ 265C C3AC20    	JMP	WHAT		;DUMMY--BUFFER ONLY HOLDS 32 CHAR
+                ;**********************************************************
+                ;****  HEX TO BINARY CONVERSION.  BINARY LEFT IN H,L.  ****
+                ;**********************************************************
+ 265F CD4027    HXBIN	CALL	FTCHR		;GET 1ST HEX DIGIT
+ 2662 FE20      	CPI	' '		;SPACE ?
+ 2664 CA5F26    	JZ	HXBIN		;YES, TRY AGAIN
+ 2667 210000    	LXI	H,0
+ 266A CD8026    CNVRT	CALL	VLDTE		;CHAR BETWEEN 0-F ?
+ 266D DAAC20    	JC	WHAT		;NO--PRINT ERR MSG.
+ 2670 29        	DAD	H		;YES--SHIFT H LEFT 1 BIT
+ 2671 29        	DAD	H		;AGAIN
+ 2672 29        	DAD	H		;AGAIN
+ 2673 29        	DAD	H		;AGAIN
+ 2674 85        	ADD	L		;PUT NEW CHAR + L IN A
+ 2675 6F        	MOV	L,A		;PUT RESULT BACK IN L
+ 2676 CD4027    	CALL	FTCHR		;GET NEXT HEX DIGIT
+ 2679 C8        	RZ			;DONE IF CAR RET.
+ 267A FE20      	CPI	' '		;COULD BE SPACE
+ 267C C26A26    	JNZ	CNVRT		;ITS NOT--PROCESS IT.
+ 267F C9        	RET			;IT IS--DONE.
+ 2680 FE30      VLDTE	CPI	'0'		;LESS THAN 0 ?
+ 2682 D8        	RC			;YES--RETURN CARRY SET
+ 2683 FE3A      	CPI	'9'+1		;GREATER THAN 9 ?
+ 2685 D28B26    	JNC	CKHEX		;YES--CK FOR HEX DIGIT.
+ 2688 D630      	SUI	'0'		;NO--CONVERT TO BINARY.
+ 268A C9        	RET
+ 268B FE41      CKHEX	CPI	'A'		;LESS THAN A ?
+ 268D D8        	RC			;YES--RETURN CARRY SET
+ 268E FE47      	CPI	'F'+1		;GREATER THAN F ?
+ 2690 3F        	CMC
+ 2691 D8        	RC			;YES--RETURN CARRY SET.
+ 2692 D637      	SUI	37H		;SUBTRACT ASCII HEX BIAS.
+ 2694 C9        	RET
+                ;**********************************************************
+                ;****  DECIMAL TO BINARY CONVERSION.  BINARY IN H,L.   ****
+                ;**********************************************************
+ 2695 CD4027    DCBIN	CALL	FTCHR		;GET 1ST DEC DIGIT
+ 2698 37        	STC
+ 2699 C8        	RZ			;AT LEAST 1 DIGIT REQD.
+ 269A FE20      	CPI	' '		;BUT SPACES ALLOWED
+ 269C CA9526    	JZ	DCBIN
+ 269F 210000    	LXI	H,0
+ 26A2 FE3A      NXTDG	CPI	'9'+1		;GREATER THAN 9 ?
+ 26A4 D2AC20    	JNC	WHAT		;YES--ERROR
+ 26A7 D630      	SUI	'0'		;SUBTRACT 0
+ 26A9 DAAC20    	JC	WHAT		;ERROR IF ANS NEG.
+ 26AC 54        	MOV	D,H
+ 26AD 5D        	MOV	E,L		;ORIG NO TO D,E
+ 26AE 29        	DAD	H		;  2*H=2H
+ 26AF 29        	DAD	H		;  2*2H=4H
+ 26B0 19        	DAD	D		;  4H+H=5H
+ 26B1 29        	DAD	H		;  2*5H=10H
+ 26B2 5F        	MOV	E,A
+ 26B3 1600      	MVI	D,0		;PUT NEW DIGIT IN D,E
+ 26B5 19        	DAD	D		;ADD IT TO H,L
+ 26B6 CD4027    	CALL	FTCHR		;GET NEXT CHAR
+ 26B9 C8        	RZ			;CR, ' ' AND ',' TERMINATE STRING
+ 26BA FE20      	CPI	' '
+ 26BC C8        	RZ
+ 26BD FE2C      	CPI	','
+ 26BF C8        	RZ
+ 26C0 C3A226    	JMP	NXTDG
+                ;**********************************************************
+                ;****  THESE ARE NUMBER CONVERSION & PRINT ROUTINES    ****
+                ;**********************************************************
+ 26C3 1100F0    HEXPT	LXI	D,-4096		;SET UP FOR MSD OF 4 DIGIT HEX
+ 26C6 0E30      	MVI	C,'0'		;SUPRESS LEADING 0'S
+ 26C8 CDEA26    	CALL	PTDGT		;CALL PRINT DIGIT
+ 26CB 1100FF    	LXI	D,-256		;SET UP FOR 2ND MSB OF 4 HEX
+ 26CE CDEA26    	CALL	PTDGT
+ 26D1 11F0FF    	LXI	D,-16		;SET UP FOR 3RD MSB OF 4 HEX
+ 26D4 C3E226    	JMP	NXTOL
+ 26D7 119CFF    THDDP	LXI	D,-100		;THREE DIGIT DECIMAL PRINT
+ 26DA 0E30      	MVI	C,'0'		;SUPRESS LEADING 0'S
+ 26DC CDEA26    	CALL	PTDGT
+ 26DF 11F6FF    TDDPT	LXI	D,-10		;SET UP FOR DECIMAL 10'S DIGIT
+ 26E2 CDEA26    NXTOL	CALL	PTDGT		;GET NEXT TO LSB, DEC OR HEX
+ 26E5 11FFFF    	LXI	D,-1		;SET UP FOR UNITS DIGIT
+ 26E8 0EFF      	MVI	C,0FFH		;TO KEEP FROM PRINTING SPACE
+ 26EA 062F      PTDGT	MVI	B,'0'-1		;INITIALIZE ASCII DIGIT
+ 26EC 22C027    GT0	SHLD	LNBUF		;STORE POSITIVE REMAINDER
+ 26EF 04        	INR	B		;INR COUNT OF SUBTRACTIONS
+ 26F0 19        	DAD	D		;SUBTRACT AGAIN (D < 0)
+ 26F1 DAEC26    	JC	GT0		;SUBTRACT AGAIN IF STILL > 0
+ 26F4 2AC027    	LHLD	LNBUF		;GET LAST POSITIVE REMAINDER
+ 26F7 78        	MOV	A,B		;CK FOR SUPRESSION OF LEADING 0'S
+ 26F8 B9        	CMP	C		;SUPPRESS (YES IF C=30H) ?
+ 26F9 CA0927    	JZ	PSPAC		;YES--PRINT SPACE INSTEAD OF 0
+ 26FC 0EFF      	MVI	C,0FFH		;DON'T SUPRESS ANY MORE 0'S
+ 26FE FE3A      	CPI	'9'+1		;GREATER THAN 9 (EG, HEX A-F)?
+ 2700 DA0B27    	JC	PRINT		;NO--PRINT AS IS
+ 2703 C607      	ADI	7		;YES--CONVERT TO ASCII HEX
+ 2705 47        	MOV	B,A
+ 2706 C30B27    	JMP	PRINT		;PRINT IT
+                ;**********************************************************
+                ;**** FIVE UTILITY ROUTINES; PRINT SPACE, PRINT CHAR,  ****
+                ;**** CAR RET/LINE FEED & LOAD M FROM DE AND DE FROM M ****
+                ;**********************************************************
+ 2709 0620      PSPAC	MVI	B,' '
+ 270B AF        PRINT	XRA	A
+ 270C C30D20    	JMP	COUT
+ 270F 060D      CRLF	MVI	B,0DH
+ 2711 CD0B27    	CALL	PRINT
+ 2714 060A      	MVI	B,0AH
+ 2716 C30B27    	JMP	PRINT
+ 2719 73        LDMDE	MOV	M,E
+ 271A 23        	INX	H
+ 271B 72        	MOV	M,D
+ 271C 23        	INX	H
+ 271D C9        	RET
+ 271E 5E        LDDEM	MOV	E,M
+ 271F 23        	INX	H
+ 2720 56        	MOV	D,M
+ 2721 23        	INX	H
+ 2722 C9        	RET
+                ;**********************************************************
+                ;**** GET THE DESIRED DRIVE FROM COMAND LINE & CONVERT ****
+                ;**** IT TO BINARY.  STORE DESIRED DRIVE AT 28EEH.     ****
+                ;**********************************************************
+ 2723 0E01      GTDRV	MVI	C,1		;1 IS DEFAULT IF NO DATA FOUND
+ 2725 CD4027    	CALL	FTCHR		;FETCH A CHARACTER
+ 2728 CA3B27    	JZ	CRFND		;IF CARRIAGE RET FOUND
+ 272B FE20      	CPI	' '
+ 272D CA2327    	JZ	GTDRV		;IF SPACE KEEP LOOKING
+ 2730 D630      	SUI	'0'		;CONVERT ASCII TO BINARY
+ 2732 CAAC20    	JZ	WHAT		;ZERO INVALID
+ 2735 4F        	MOV	C,A
+ 2736 E6FC      	ANI	0FCH
+ 2738 C2AC20    	JNZ	WHAT		;ANS > 3 INVALID
+ 273B 79        CRFND	MOV	A,C
+ 273C 32EE28    	STA	L28EE
+ 273F C9        	RET			;WITH ANSWER IN C,A AND AT 28EEH
+                ;**********************************************************
+                ;****  ROUTINE TO SUPPLY ONE CHAR FROM INPUT BUFFER    ****
+                ;**********************************************************
+ 2740 E5        FTCHR	PUSH	H
+ 2741 2AF628    	LHLD	CLPTR
+ 2744 7E        	MOV	A,M
+ 2745 FE0D      	CPI	0DH
+ 2747 CA4E27    	JZ	L274E
+ 274A 23        	INX	H
+ 274B 22F628    	SHLD	CLPTR
+ 274E E1        L274E	POP	H
+ 274F C9        	RET
+ 2750 CD4027    L2750	CALL	FTCHR		;ENTR HERE IF EOF REQD
+ 2753 C2AC20    	JNZ	WHAT
+ 2756 C9        	RET
+                ;**********************************************************
+                ;****  COMPARE D,E WITH STRING POINTED TO BY H,L       ****
+                ;**********************************************************
+ 2757 23        COMPR	INX	H
+ 2758 7A        	MOV	A,D
+ 2759 BE        	CMP	M
+ 275A 2B        	DCX	H
+ 275B C0        	RNZ
+ 275C 7B        	MOV	A,E
+ 275D BE        	CMP	M
+ 275E C9        	RET
+                ;**********************************************************
+                ;****  ROUTINES TO COMPARE DISK TO RAM MEMORY.  VERY   ****
+                ;****  SIMILAR TO ROUTINES IN PROM BS AT E94C & E9AE.  ****
+                ;**********************************************************
+ 275F 068C      L275F	MVI	B,8CH		;MAX DELAY SECTR TO SYNC CHAR
+ 2761 1150EB    	LXI	D,BOARD+350H	;SET UP MEM MAP DATA READ ADDR
+ 2764 0E00      	MVI	C,0
+ 2766 3A10EB    SWAIT	LDA	LEB10		;LOAD A STAT REG INTO ACC
+ 2769 E604      	ANI	4		;MASK SYNC CHAR FOUND
+ 276B C27727    	JNZ	RDVER		;TO DO ACTUAL READ/VERIFY
+ 276E 05        	DCR	B		;NOT FOUND-DCR COUNT
+ 276F C26627    	JNZ	SWAIT		;JUMP SYNC WAIT
+ 2772 3E01      	MVI	A,1		;TOO MUCH TIME PASSED
+ 2774 C3ABE9    	JMP	LE9AB		;ERROR ROUTINE IN PROM
+ 2777 41        RDVER	MOV	B,C		;C & B HAVE 0
+ 2778 1A        NXBYT	LDAX	D		;THIS IS ACTUAL READ STMNT
+ 2779 BE        	CMP	M		;COMPARE WITH RAM
+ 277A 3E03      	MVI	A,3
+ 277C C2ABE9    	JNZ	LE9AB		;JUMP TO ERR IN PROM IF NOT SAME
+ 277F 23        	INX	H		;OK--INR RAM ADDR
+ 2780 0D        	DCR	C		;DCR BYTES TO GO (DOING 256)
+ 2781 C27827    	JNZ	NXBYT		;IF NOT DONE, CONTINUE
+ 2784 F1        	POP	PSW		;NO OF 256 BYTE BLOCKS TO CHECK
+ 2785 3D        	DCR	A
+ 2786 C8        	RZ			;IF ZERO, DONE.
+ 2787 F5        	PUSH	PSW		;NOT DONE, PUT IT BACK
+ 2788 CDCEE9    	CALL	LE9CE		;WAIT FOR NEXT SECTOR HOLE
+ 278B C35F27    	JMP	L275F		;AND DO NEXT BLOCK
+                ;**********************************************************
+                ;****  DISK WRITE ROUTINE.                             ****
+                ;**********************************************************
+ 278E 3A04EB    L278E	LDA	LEB04		;START WRITE SECTOR SEQ
+ 2791 3A10EB    L2791	LDA	LEB10		;LOAD A STATUS REG
+ 2794 E608      	ANI	8		;MASK WRITE STATUS BIT
+ 2796 CA9127    	JZ	L2791		;WAIT IF NOT FOUND
+ 2799 16EA      	MVI	D,BRD+2		;THE "WRITE" ADDR-DATA OFFSET
+ 279B 010F00    	LXI	B,000FH		;B = 0, C = 15
+ 279E 58        	MOV	E,B		;DATA TO WRITE IS ZERO
+ 279F 1A        L279F	LDAX	D		;WRITE A ZERO
+ 27A0 0D        	DCR	C		;WRITE 15 OF THEM
+ 27A1 C29F27    	JNZ	L279F		;IF NOT DONE
+ 27A4 1EFB      	MVI	E,0FBH		;SET UP THE SYNC CHAR
+ 27A6 1A        	LDAX	D		;WRITE IT
+ 27A7 7E        L27A7	MOV	A,M		;GET THE DATA TO WRITE
+ 27A8 5F        	MOV	E,A		;SET IT UP
+ 27A9 A8        	XRA	B		;WORKING ON CRC
+ 27AA 07        	RLC			;STILL WORKING ON CRC
+ 27AB 47        	MOV	B,A		;SAVE PARTIAL CRC
+ 27AC 1A        	LDAX	D		;WRITE THE DATA
+ 27AD 23        	INX	H		;POINT TO NEXT DATA BYTE
+ 27AE 0D        	DCR	C		;DCR COUNT OF BYTES LEFT
+ 27AF C2A727    	JNZ	L27A7		;TO DO NEXT BYTE
+ 27B2 58        	MOV	E,B		;SET TO WRITE CRC BYTE
+ 27B3 1A        	LDAX	D		;DO IT
+ 27B4 F1        	POP	PSW		;GET NO SECTORS LEFT TO DO
+ 27B5 3D        	DCR	A		;DECREMENT BY ONE
+ 27B6 C8        	RZ			;RETURN IF ZERO
+ 27B7 F5        	PUSH	PSW		;SAVE NO SECTORS
+ 27B8 CDCEE9    	CALL	LE9CE		;WAIT FOR SECTOR HOLE
+ 27BB C30A20    	JMP	L200A		;TO DO NEXT SECTOR
+ 27BE 00        L27BE	NOP
+ 27BF 00        L27BF	NOP
+ 27C0           LNBUF	DS	32		;THESE ARE ACTUALLY NOP'S
+ 27E0           AREA	DS	24		;THESE ARE ACTUALLY DB 20H'S
+ 27F8           	DS	232		;THESE ARE ACTUALLY NOP'S
+ 28E0 00        L28E0	NOP
+ 28E1 00        	NOP
+ 28E2 00        L28E2	NOP
+ 28E3 00        	NOP
+ 28E4           L28E4	DS	2		;THESE ARE ACTUALLY NOP'S
+ 28E6           L28E6	DS	8		;A NAME BUFFER (ACT NOP'S)
+ 28EE 00        L28EE	NOP
+ 28EF 00        L28EF	NOP
+ 28F0 00        L28F0	NOP
+ 28F1 00        L28F1	NOP
+ 28F2 00        L28F2	NOP
+ 28F3 00        	NOP
+ 28F4 00        L28F4	NOP
+ 28F5 00        	NOP
+ 28F6           CLPTR	DS	2		;COMND LINE POINTER (ACT NOP)
+ 28F8           	DS	8		;ACTUALLY NOP'S
+ 2900           L2900	DS	256		;USER I/O AREA--ACTUALLY NOP'S
+
