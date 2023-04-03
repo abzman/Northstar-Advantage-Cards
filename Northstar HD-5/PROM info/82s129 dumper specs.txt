@@ -1,0 +1,11 @@
+dumped as a 2716
+A0-A7 hooked to A0-A7
+Q1-Q4 hooked to D0-D3
+/CE1 and /CE2 hooked to /CE
+Vcc hooked to Vcc
+Gnd hooked to Gnd
+
+2716 lines D4-D7 hooked to Gnd
+2716 lines A8-A10 left unhooked
+
+Rom is 8x the PROM sixe in addresses and the upper 4 bits of each byte are unused
