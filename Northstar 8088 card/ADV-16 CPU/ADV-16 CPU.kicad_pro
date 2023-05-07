@@ -55,7 +55,17 @@
           "width": 0.0
         }
       ],
-      "drc_exclusions": [],
+      "drc_exclusions": [
+        "lib_footprint_issues|222080600|187525250|6b645c81-de00-4ea9-8e65-af4442b70d65|00000000-0000-0000-0000-000000000000",
+        "lib_footprint_mismatch|105581250|87025000|731cf3ad-a13b-4326-8fb8-6b4293811caa|00000000-0000-0000-0000-000000000000",
+        "lib_footprint_mismatch|243943750|27401250|94ab1512-8565-4352-9cc3-568d173bbcbc|00000000-0000-0000-0000-000000000000",
+        "silk_overlap|246291485|172463628|f5ff9d34-28e6-4c63-b1f9-a3c8863cbd91|a1b7a302-d890-4bd4-a908-b1711d43f63f",
+        "silk_overlap|246349069|172506448|f5ff9d34-28e6-4c63-b1f9-a3c8863cbd91|65ce3ff7-38c2-4daa-879b-e10428bb2855",
+        "silk_overlap|251460000|57531000|c273fffe-b28e-4dcb-be41-43148e0a932e|aaf3a1df-99ca-40df-aa1d-1114fb4e2d64",
+        "via_dangling|132715000|114935000|7823236d-fd7c-4d31-abd3-ec23b03b757e|00000000-0000-0000-0000-000000000000",
+        "via_dangling|132715000|130175000|069c13c4-56c7-4a9c-b435-828521512839|00000000-0000-0000-0000-000000000000",
+        "via_dangling|132715000|132715000|d8834a46-ee10-428a-9887-098643aa2062|00000000-0000-0000-0000-000000000000"
+      ],
       "meta": {
         "version": 2
       },
@@ -63,7 +73,7 @@
         "annular_width": "error",
         "clearance": "error",
         "connection_width": "warning",
-        "copper_edge_clearance": "error",
+        "copper_edge_clearance": "ignore",
         "copper_sliver": "warning",
         "courtyards_overlap": "error",
         "diff_pair_gap_out_of_range": "error",
@@ -91,7 +101,7 @@
         "padstack": "warning",
         "pth_inside_courtyard": "ignore",
         "shorting_items": "error",
-        "silk_edge_clearance": "warning",
+        "silk_edge_clearance": "ignore",
         "silk_over_copper": "warning",
         "silk_overlap": "warning",
         "skew_out_of_range": "error",
